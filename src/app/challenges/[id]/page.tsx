@@ -26,7 +26,7 @@ function ChallengeDetail({ challengeId }: { challengeId: string }) {
   if (loading || !user) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
-        <p className="text-sm text-gray-500">Loading challenge…</p>
+        <p className="text-sm text-muted">Loading challenge…</p>
       </div>
     );
   }
@@ -34,7 +34,7 @@ function ChallengeDetail({ challengeId }: { challengeId: string }) {
   if (!challenge) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
-        <p className="text-sm text-gray-500">Challenge not found.</p>
+        <p className="text-sm text-muted">Challenge not found.</p>
       </div>
     );
   }
@@ -46,26 +46,26 @@ function ChallengeDetail({ challengeId }: { challengeId: string }) {
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-4 py-8">
       <header className="flex flex-col gap-2">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-foreground">
             {challenge.name}
           </h1>
           {isMember && <InviteLinkButton token={challenge.inviteToken} />}
         </div>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-muted">
           {challenge.sportType} · Goal: {formatGoal(challenge.goal)} ·{" "}
           {challenge.startDate} → {challenge.endDate}
         </p>
         {challenge.description && (
-          <p className="text-sm text-gray-500">{challenge.description}</p>
+          <p className="text-sm text-muted">{challenge.description}</p>
         )}
         {status === "ended" && (
-          <p className="text-sm font-medium text-gray-500">
-            This challenge has ended.
+          <p className="rounded-md border border-error/30 bg-error/10 px-4 py-3 text-sm font-medium text-error">
+            Challenge completed! 🏁 Check out the final ranking below.
           </p>
         )}
         {status === "upcoming" && (
-          <p className="text-sm font-medium text-blue-600">
-            Starts {challenge.startDate}.
+          <p className="rounded-md border border-info/30 bg-info/10 px-4 py-3 text-sm font-medium text-info">
+            Starts {challenge.startDate} — get your shoes ready.
           </p>
         )}
       </header>

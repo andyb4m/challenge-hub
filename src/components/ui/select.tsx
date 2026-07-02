@@ -8,8 +8,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     <select
       ref={ref}
       className={cn(
-        "flex h-10 w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-1",
+        "flex h-10 w-full rounded-md border border-line bg-background-secondary px-3 py-2 text-base text-foreground sm:text-sm",
+        "focus-visible:border-primary focus-visible:outline-none focus-visible:ring-[3px] focus-visible:ring-primary/15",
         "disabled:cursor-not-allowed disabled:opacity-50",
         className
       )}

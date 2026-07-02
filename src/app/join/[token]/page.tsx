@@ -36,14 +36,14 @@ function JoinContent({ token }: { token: string }) {
 
   if (notFound) {
     return (
-      <p className="text-center text-gray-600">
+      <p className="text-center text-muted">
         This invite link isn&apos;t valid. Ask your friend to send it again.
       </p>
     );
   }
 
   if (!challenge || !profile) {
-    return <p className="text-center text-sm text-gray-500">Loading…</p>;
+    return <p className="text-center text-sm text-muted">Loading…</p>;
   }
 
   const eligibility: JoinEligibility = checkJoinEligibility(
@@ -76,9 +76,9 @@ function JoinContent({ token }: { token: string }) {
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
         {challenge.description && (
-          <p className="text-sm text-gray-600">{challenge.description}</p>
+          <p className="text-sm text-muted">{challenge.description}</p>
         )}
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-muted">
           {challenge.memberCount}{" "}
           {challenge.memberCount === 1 ? "member" : "members"} so far.
         </p>
@@ -100,13 +100,13 @@ function JoinContent({ token }: { token: string }) {
             You&apos;re already in — open it
           </Button>
         ) : (
-          <p className="text-sm font-medium text-gray-500">
+          <p className="text-sm font-medium text-muted">
             This challenge has already ended.
           </p>
         )}
 
         {error && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-error">
             {error}
           </p>
         )}

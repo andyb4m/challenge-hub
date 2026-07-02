@@ -54,6 +54,7 @@ A Next.js 14 web platform that lets small friend groups create and compete in fi
 - [x] Auth redirect flow: `RequireAuth` preserves destination via `?next=` (sanitized by `safeNextPath`) so invite links survive login/registration
 - [x] **firestore.rules changed** — must be re-published to the console: manual activity create/delete by owner, memberCount-only challenge updates by joiners
 - [x] Tests: 66 passing (invite eligibility, scoring/ranking per goal unit, doc builders, validation, redirect sanitizer); session-1 sketch tests replaced with real implementations
+- [x] **Design system ported from the legacy `running-challenge` app** (Andreas provided a handoff doc, preserved at `docs/legacy-summerfit-handoff.md` — READ IT before styling anything or building hybrid challenges). Dark navy theme (`#0f0f23`/`#16213e` cards), Inter font (runtime Google Fonts link, NOT next/font — keeps builds offline-safe), indigo→purple gradient primary buttons with glow hover, tinted `color/10` status badges/banners, palette lives in `tailwind.config.ts`. Per-challenge accent theming (the legacy token-override mechanism) is deliberately not implemented yet.
 
 ### Tech debt / deferred (update this list whenever Andreas says "skip for now")
 - [ ] **Firebase Storage not enabled** — new Firebase projects require the Blaze plan for Storage. Profile photo upload is fully implemented (`uploadProfilePhoto` in `src/lib/auth/service.ts`) but hidden behind `NEXT_PUBLIC_ENABLE_PHOTO_UPLOAD=true`. To re-enable: upgrade plan → enable Storage → publish Storage rules (allow `users/{uid}/{file}` write for owner) → set the flag. Note: Storage SDK retries failing uploads for minutes before rejecting, which looked like a hang in testing.
@@ -61,6 +62,7 @@ A Next.js 14 web platform that lets small friend groups create and compete in fi
 
 ### Not started yet
 - [ ] `feature/strava-integration` — OAuth callback, webhook handler, activity backfill; must set `source: "strava"` on synced activities and update the same member totals the manual flow does
+- [ ] **Hybrid (points-based) challenges** — the group's favourite format, per the legacy SummerFit 2026 challenge (`docs/legacy-summerfit-handoff.md` §3): HR-zone minutes × multipliers + flat-point activity types (with weekly rate limits) + the 80/20 low-intensity ×1.15 bonus. Needs a second challenge kind (`scoring: "goal" | "points"`) — design this BEFORE Strava integration hardens the single-sport/goal assumption. Legacy lessons already baked in: canonical server-side scoring, per-challenge collections never repurposed; still open: server-side date-window enforcement.
 - [ ] Firebase Auth providers enabled in Firebase console (email/password + Google)
 - [ ] Strava API credentials (deferred — not available during session 1)
 

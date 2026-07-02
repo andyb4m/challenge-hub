@@ -97,7 +97,7 @@ function LoginForm() {
               />
             </div>
             {error && (
-              <p role="alert" className="text-sm text-red-600">
+              <p role="alert" className="text-sm text-error">
                 {error}
               </p>
             )}
@@ -107,18 +107,18 @@ function LoginForm() {
           </form>
 
           <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-gray-200" />
-            <span className="text-xs uppercase text-gray-400">or</span>
-            <div className="h-px flex-1 bg-gray-200" />
+            <div className="h-px flex-1 bg-line" />
+            <span className="text-xs uppercase text-faint">or</span>
+            <div className="h-px flex-1 bg-line" />
           </div>
 
           <GoogleSignInButton onClick={handleGoogle} disabled={submitting} />
 
-          <p className="text-center text-sm text-gray-500">
+          <p className="text-center text-sm text-muted">
             No account yet?{" "}
             <Link
               href={`/register?next=${encodeURIComponent(next)}`}
-              className="font-medium text-gray-900 underline"
+              className="font-medium text-foreground underline"
             >
               Register
             </Link>

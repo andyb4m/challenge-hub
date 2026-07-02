@@ -49,7 +49,7 @@ export function ActivityFeed({
       </CardHeader>
       <CardContent>
         {activities.length === 0 ? (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted">
             Nothing logged yet — be the first!
           </p>
         ) : (
@@ -57,13 +57,13 @@ export function ActivityFeed({
             {activities.map((activity) => (
               <li
                 key={activity.id}
-                className="flex items-center justify-between gap-3 border-b border-gray-100 pb-3 last:border-b-0 last:pb-0"
+                className="flex items-center justify-between gap-3 border-b border-line/60 pb-3 last:border-b-0 last:pb-0"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-gray-900">
+                  <p className="truncate text-sm font-medium text-foreground">
                     {activity.name}
                   </p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-muted">
                     {nameByUid.get(activity.uid) ?? "Former member"} ·{" "}
                     {activity.startDate.slice(0, 10)} ·{" "}
                     {formatActivityStats(activity)}
@@ -75,7 +75,7 @@ export function ActivityFeed({
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="text-red-600 hover:bg-red-50"
+                      className="text-error hover:bg-error/10"
                       onClick={() => handleDelete(activity)}
                       disabled={deletingId === activity.id}
                     >

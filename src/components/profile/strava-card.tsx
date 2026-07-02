@@ -42,7 +42,7 @@ export function StravaCard({ profile }: { profile: User }) {
       <CardContent className="flex flex-col gap-3">
         {profile.strava ? (
           <>
-            <p className="text-sm text-gray-700">
+            <p className="text-sm text-muted">
               Connected as athlete{" "}
               <span className="font-medium">#{profile.strava.athleteId}</span>{" "}
               since{" "}
@@ -59,19 +59,20 @@ export function StravaCard({ profile }: { profile: User }) {
           </>
         ) : stravaConfigured ? (
           <a href={buildStravaAuthUrl(profile.uid)} className="self-start">
-            <Button className="bg-[#FC4C02] text-white hover:bg-[#e04502]">
+            {/* bg-none clears the default gradient so Strava brand orange shows */}
+            <Button className="bg-none bg-[#FC4C02] text-white hover:bg-[#e04502]">
               Connect with Strava
             </Button>
           </a>
         ) : (
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted">
             Strava connection isn&apos;t available yet — API credentials
             haven&apos;t been configured.
           </p>
         )}
 
         {error && (
-          <p role="alert" className="text-sm text-red-600">
+          <p role="alert" className="text-sm text-error">
             {error}
           </p>
         )}

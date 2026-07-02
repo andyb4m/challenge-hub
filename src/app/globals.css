@@ -2,20 +2,33 @@
 @tailwind components;
 @tailwind utilities;
 
+/*
+ * Design tokens ported from the legacy running-challenge app
+ * (docs/legacy-summerfit-handoff.md §4). Dark theme only — that IS the
+ * product's identity. The canonical palette lives in tailwind.config.ts;
+ * the variables here exist for the per-challenge theme-override mechanism
+ * (a challenge page can re-declare accents in a scoped wrapper later).
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --background: #0f0f23;
+  --foreground: #ffffff;
+  --gradient-primary: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Gradient-filled text, e.g. the accent word in headings (legacy pattern) */
+.text-gradient {
+  background: var(--gradient-primary);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+/* Date inputs: dark theme for the native calendar icon */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.7);
 }

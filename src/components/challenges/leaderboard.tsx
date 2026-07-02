@@ -43,8 +43,8 @@ export function Leaderboard({
             const isMe = member.uid === currentUid;
             return (
               <li key={member.uid} className="flex items-center gap-3">
-                <span className="w-6 text-center text-sm font-semibold text-gray-500">
-                  {index + 1}
+                <span className="w-6 text-center text-sm font-semibold text-muted">
+                  {index === 0 ? "🏆" : index + 1}
                 </span>
                 {member.photoURL ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -54,7 +54,7 @@ export function Leaderboard({
                     className="h-8 w-8 rounded-full object-cover"
                   />
                 ) : (
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-200 text-xs font-medium text-gray-600">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-line text-xs font-medium text-muted">
                     {member.displayName.charAt(0).toUpperCase()}
                   </span>
                 )}
@@ -63,24 +63,24 @@ export function Leaderboard({
                     <span
                       className={cn(
                         "truncate text-sm",
-                        isMe ? "font-semibold text-gray-900" : "text-gray-700"
+                        isMe ? "font-semibold text-foreground" : "text-muted"
                       )}
                     >
                       {member.displayName}
                       {isMe && " (you)"}
                     </span>
-                    <span className="whitespace-nowrap text-sm text-gray-600">
+                    <span className="whitespace-nowrap text-sm text-muted">
                       {formatTotal(
                         memberTotalInUnit(member, challenge.goal.unit),
                         challenge.goal.unit
                       )}
                     </span>
                   </div>
-                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-gray-100">
+                  <div className="mt-1 h-2 overflow-hidden rounded-full bg-background-secondary">
                     <div
                       className={cn(
                         "h-full rounded-full",
-                        progress >= 1 ? "bg-green-500" : "bg-gray-800"
+                        progress >= 1 ? "bg-success" : "bg-gradient-primary"
                       )}
                       style={{ width: `${Math.round(progress * 100)}%` }}
                     />
@@ -91,7 +91,7 @@ export function Leaderboard({
           })}
         </ol>
         {ranked.length === 0 && (
-          <p className="text-sm text-gray-500">No members yet.</p>
+          <p className="text-sm text-muted">No members yet.</p>
         )}
       </CardContent>
     </Card>
