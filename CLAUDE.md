@@ -33,8 +33,16 @@ A Next.js 14 web platform that lets small friend groups create and compete in fi
 - [x] Critical-path tests: webhook sig (4 passing), scoring (4 passing), invite tokens (3 passing)
 - [x] Dev server running locally on Windows at localhost:3000
 
+### Done in session 2 (branch `claude/challenge-hub-auth-users-9sht9o`)
+- [x] Auth & users feature: `/login`, `/register` (email/password + Google popup), `/profile` (edit display name, upload photo to Storage, Strava connect/disconnect UI)
+- [x] `AuthProvider` context (`src/lib/auth/auth-context.tsx`): Firebase auth state + live `users/{uid}` profile via `onSnapshot`; user doc auto-created on first sign-in (`ensureUserDocument`, idempotent)
+- [x] Auth lib: `src/lib/auth/service.ts` (all Firebase auth/Firestore/Storage calls), `validation.ts` (zod schemas), `user-doc.ts` (pure `buildNewUser` mapping)
+- [x] UI primitives hand-written in shadcn style (`src/components/ui/`: button, input, label, card) with `cn()` util — deliberately did NOT run shadcn CLI init; added deps `clsx` + `tailwind-merge` only
+- [x] Site header with auth state in root layout; `RequireAuth` client-side guard for protected pages
+- [x] Tests: validation schemas (9) + user-doc mapping (4); full suite 24 passing
+- [x] Added missing `.eslintrc.json` (`next/core-web-vitals`) — `next lint` previously prompted interactively, which would have hung CI
+
 ### Not started yet
-- [ ] `feature/auth-and-users` — login, register, user profile, Strava connect UI
 - [ ] `feature/challenges-core` — challenge creation, invite links, join flow, leaderboard
 - [ ] `feature/strava-integration` — OAuth callback, webhook handler, activity backfill
 - [ ] Firebase Auth providers enabled in Firebase console (email/password + Google)
