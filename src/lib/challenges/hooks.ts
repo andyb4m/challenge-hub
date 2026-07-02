@@ -1,0 +1,84 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import {
+  collection,
+  doc,
+  onSnapshot,
+  orderBy,
+  query,
+} from "firebase/firestore";
+import useSWR from "swr";
+import { firestoreDb } from "@/lib/firebase/client";
+import { COLLECTIONS } from "@/lib/firebase/collections";
+import { useAuth } from "@/lib/auth/auth-context";
+import { fetchChallengesByIds } from "@/lib/challenges/service";
+import type { Activity, Challenge, ChallengeMember } from "@/types";
+
+/** The signed-in user's challenges; refetches when their membership changes. */
+export function useMyChallenges() {
+  const { profile } = useAuth();
+  const challengeIds = profile?.challengeIds ?? [];
+
+  const { data, error, isLoading } = useSWR(
+    profile ? ["my-challenges", ...challengeIds] : null,
+    () => fetchChallengesByIds(challengeIds)
+  );
+
+  return { challenges: data ?? [], error, isLoading };
+}
+
+/** Live challenge doc; `challenge` is null while loading or if missing. */
+export function useChallenge(challengeId: string) {
+  const [challenge, setChallenge] = useState<Challenge | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    return onSnapshot(
+      doc(firestoreDb(), COLLECTIONS.challenges, challengeId),
+      (snap) => {
+        setChallenge(
+          snap.exists() ? ({ id: snap.id, ...snap.data() } as Challenge) : null
+        );
+        setLoading(false);
+      },
+      () => setLoading(false)
+    );
+  }, [challengeId]);
+
+  return { challenge, loading };
+}
+
+/** Live member list, unranked — order with rankMembers() at render time. */
+export function useMembers(challengeId: string) {
+  const [members, setMembers] = useState<ChallengeMember[]>([]);
+
+  useEffect(() => {
+    return onSnapshot(
+      collection(firestoreDb(), COLLECTIONS.members(challengeId)),
+      (snap) => setMembers(snap.docs.map((d) => d.data() as ChallengeMember))
+    );
+  }, [challengeId]);
+
+  return members;
+}
+
+/** Live activity feed, newest first. */
+export function useActivities(challengeId: string) {
+  const [activities, setActivities] = useState<Activity[]>([]);
+
+  useEffect(() => {
+    return onSnapshot(
+      query(
+        collection(firestoreDb(), COLLECTIONS.activities(challengeId)),
+        orderBy("startDate", "desc")
+      ),
+      (snap) =>
+        setActivities(
+          snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Activity)
+        )
+    );
+  }, [challengeId]);
+
+  return activities;
+}

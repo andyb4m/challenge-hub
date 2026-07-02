@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   registerWithEmail,
   signInWithGoogle,
   friendlyAuthError,
 } from "@/lib/auth/service";
 import { registerSchema, firstError } from "@/lib/auth/validation";
+import { safeNextPath } from "@/lib/auth/redirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,8 +22,9 @@ import {
 } from "@/components/ui/card";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const next = safeNextPath(useSearchParams().get("next"));
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,7 +45,7 @@ export default function RegisterPage() {
     setSubmitting(true);
     try {
       await registerWithEmail(displayName.trim(), email.trim(), password);
-      router.push("/profile");
+      router.push(next);
     } catch (err) {
       setError(friendlyAuthError(err));
       setSubmitting(false);
@@ -55,7 +57,7 @@ export default function RegisterPage() {
     setSubmitting(true);
     try {
       await signInWithGoogle();
-      router.push("/profile");
+      router.push(next);
     } catch (err) {
       setError(friendlyAuthError(err));
       setSubmitting(false);
@@ -126,12 +128,24 @@ export default function RegisterPage() {
 
           <p className="text-center text-sm text-gray-500">
             Already have an account?{" "}
-            <Link href="/login" className="font-medium text-gray-900 underline">
+            <Link
+              href={`/login?next=${encodeURIComponent(next)}`}
+              className="font-medium text-gray-900 underline"
+            >
               Sign in
             </Link>
           </p>
         </CardContent>
       </Card>
     </main>
+  );
+}
+
+export default function RegisterPage() {
+  // useSearchParams requires a Suspense boundary during prerendering
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
   );
 }

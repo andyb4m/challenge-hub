@@ -7,4 +7,9 @@ export type {
   ChallengeGoal,
   ChallengeGoalUnit,
 } from "./challenge";
-export type { Activity, StravaActivity, StravaWebhookEvent } from "./activity";
+export type {
+  Activity,
+  ActivitySource,
+  StravaActivity,
+  StravaWebhookEvent,
+} from "./activity";

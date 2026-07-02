@@ -1,22 +1,24 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 
 /**
- * Client-side route guard: renders children only when signed in,
- * otherwise redirects to /login once the auth state has resolved.
+ * Client-side route guard: renders children only when signed in, otherwise
+ * redirects to /login once the auth state has resolved. The original
+ * destination rides along as ?next= so invite links survive registration.
  */
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
     if (!loading && !user) {
-      router.replace("/login");
+      router.replace(`/login?next=${encodeURIComponent(pathname)}`);
     }
-  }, [loading, user, router]);
+  }, [loading, user, router, pathname]);
 
   if (loading || !user) {
     return (

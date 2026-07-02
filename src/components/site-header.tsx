@@ -25,6 +25,12 @@ export function SiteHeader() {
         {loading ? null : user ? (
           <nav className="flex items-center gap-3">
             <Link
+              href="/challenges"
+              className="text-sm text-gray-700 hover:text-gray-900"
+            >
+              Challenges
+            </Link>
+            <Link
               href="/profile"
               className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
             >

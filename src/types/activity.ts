@@ -1,10 +1,13 @@
 import type { SportType } from "./challenge";
 
+export type ActivitySource = "strava" | "manual";
+
 export interface Activity {
   id: string;
   challengeId: string;
   uid: string;
-  stravaActivityId: number;
+  source: ActivitySource;
+  stravaActivityId: number | null; // null for manual entries
   name: string;
   sportType: SportType;
   distance: number;    // metres
