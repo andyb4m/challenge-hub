@@ -29,6 +29,8 @@ export const GOAL_UNIT_LABELS: Record<(typeof GOAL_UNITS)[number], string> = {
   count: "Number of activities",
 };
 
+export const CHALLENGE_SCORINGS = ["goal", "zone", "variety"] as const;
+
 export const createChallengeSchema = z
   .object({
     name: z
@@ -40,20 +42,28 @@ export const createChallengeSchema = z
       .string()
       .trim()
       .max(500, "Description must be at most 500 characters"),
-    sportType: z.enum(SPORT_TYPES),
-    goal: z.object({
-      value: z
-        .number({ invalid_type_error: "Enter a goal value" })
-        .positive("Goal must be greater than zero")
-        .max(1_000_000, "That goal looks too large"),
-      unit: z.enum(GOAL_UNITS),
-    }),
+    scoring: z.enum(CHALLENGE_SCORINGS),
+    // Only goal challenges carry a sport and target; zone/variety pass null
+    sportType: z.enum(SPORT_TYPES).nullable(),
+    goal: z
+      .object({
+        value: z
+          .number({ invalid_type_error: "Enter a goal value" })
+          .positive("Goal must be greater than zero")
+          .max(1_000_000, "That goal looks too large"),
+        unit: z.enum(GOAL_UNITS),
+      })
+      .nullable(),
     startDate: dateString,
     endDate: dateString,
   })
   .refine((c) => c.endDate >= c.startDate, {
     message: "End date must not be before the start date",
     path: ["endDate"],
+  })
+  .refine((c) => c.scoring !== "goal" || (c.sportType !== null && c.goal !== null), {
+    message: "Goal challenges need a sport and a goal",
+    path: ["goal"],
   });
 
 export const manualActivitySchema = z.object({
@@ -71,6 +81,54 @@ export const manualActivitySchema = z.object({
     .number({ invalid_type_error: "Enter a duration in minutes" })
     .positive("Duration must be greater than zero")
     .max(24 * 60, "Duration can't exceed 24 hours"),
+});
+
+const zoneMinutesField = z
+  .number({ invalid_type_error: "Enter minutes (0 if none)" })
+  .min(0, "Minutes can't be negative")
+  .max(600, "That looks too long for one session");
+
+/** Zone challenge entry: exactly one of the three shapes. */
+export const zoneActivitySchema = z
+  .discriminatedUnion("kind", [
+    z.object({
+      kind: z.literal("zone-training"),
+      date: dateString,
+      zones: z.object({
+        z2: zoneMinutesField,
+        z3: zoneMinutesField,
+        z4: zoneMinutesField,
+        z5: zoneMinutesField,
+      }),
+    }),
+    z.object({
+      kind: z.literal("others"),
+      date: dateString,
+      tier: z.enum(["30", "60"]),
+    }),
+    z.object({
+      kind: z.literal("recovery"),
+      date: dateString,
+    }),
+  ])
+  // zod can't nest .refine() inside a discriminatedUnion member, so the
+  // "at least one zone" rule lives on the union
+  .superRefine((a, ctx) => {
+    if (
+      a.kind === "zone-training" &&
+      a.zones.z2 + a.zones.z3 + a.zones.z4 + a.zones.z5 <= 0
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Enter time in at least one zone",
+        path: ["zones"],
+      });
+    }
+  });
+
+export const varietyActivitySchema = z.object({
+  kindId: z.string().min(1, "Pick an activity"),
+  date: dateString,
 });
 
 /**

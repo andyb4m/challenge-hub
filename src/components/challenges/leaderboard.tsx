@@ -2,11 +2,15 @@
 
 import type { Challenge, ChallengeMember } from "@/types";
 import {
+  challengeScoring,
+  formatScore,
   formatTotal,
-  goalProgress,
-  memberTotalInUnit,
-  rankMembers,
+  memberProgress,
+  memberScore,
+  rankMembersForChallenge,
 } from "@/lib/challenges/scoring";
+import { DEFAULT_ZONE_CONFIG, hasZoneBonus } from "@/lib/challenges/zone";
+import { VARIETY_KINDS } from "@/lib/challenges/variety";
 import {
   Card,
   CardContent,
@@ -15,6 +19,19 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+
+function leaderboardBlurb(challenge: Challenge): string {
+  switch (challengeScoring(challenge)) {
+    case "goal":
+      return challenge.goal
+        ? `First to ${formatTotal(challenge.goal.value, challenge.goal.unit)} — or the furthest along when time runs out.`
+        : "";
+    case "zone":
+      return "Points from zones, workouts and recovery. ⭐ = 80/20 low-intensity bonus (×1.15) active.";
+    case "variety":
+      return `Most different sports wins — ${VARIETY_KINDS.length} kinds to collect.`;
+  }
+}
 
 export function Leaderboard({
   challenge,
@@ -25,22 +42,23 @@ export function Leaderboard({
   members: ChallengeMember[];
   currentUid: string;
 }) {
-  const ranked = rankMembers(members, challenge.goal.unit);
+  const scoring = challengeScoring(challenge);
+  const ranked = rankMembersForChallenge(challenge, members);
+  const leaderScore = ranked.length > 0 ? memberScore(challenge, ranked[0]) : 0;
+  const zoneConfig = challenge.zoneConfig ?? DEFAULT_ZONE_CONFIG;
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Leaderboard</CardTitle>
-        <CardDescription>
-          First to {formatTotal(challenge.goal.value, challenge.goal.unit)} —
-          or the furthest along when time runs out.
-        </CardDescription>
+        <CardDescription>{leaderboardBlurb(challenge)}</CardDescription>
       </CardHeader>
       <CardContent>
         <ol className="flex flex-col gap-4">
           {ranked.map((member, index) => {
-            const progress = goalProgress(member, challenge.goal);
+            const progress = memberProgress(challenge, member, leaderScore);
             const isMe = member.uid === currentUid;
+            const bonus = scoring === "zone" && hasZoneBonus(member, zoneConfig);
             return (
               <li key={member.uid} className="flex items-center gap-3">
                 <span className="w-6 text-center text-sm font-semibold text-muted">
@@ -68,19 +86,26 @@ export function Leaderboard({
                     >
                       {member.displayName}
                       {isMe && " (you)"}
+                      {bonus && (
+                        <span
+                          className="ml-1.5 rounded-full bg-warning/10 px-1.5 py-0.5 text-xs font-semibold text-warning"
+                          title="80/20 low-intensity bonus active: ×1.15"
+                        >
+                          ⭐ +15%
+                        </span>
+                      )}
                     </span>
                     <span className="whitespace-nowrap text-sm text-muted">
-                      {formatTotal(
-                        memberTotalInUnit(member, challenge.goal.unit),
-                        challenge.goal.unit
-                      )}
+                      {formatScore(challenge, member)}
                     </span>
                   </div>
                   <div className="mt-1 h-2 overflow-hidden rounded-full bg-background-secondary">
                     <div
                       className={cn(
                         "h-full rounded-full",
-                        progress >= 1 ? "bg-success" : "bg-gradient-primary"
+                        scoring === "goal" && progress >= 1
+                          ? "bg-success"
+                          : "bg-gradient-primary"
                       )}
                       style={{ width: `${Math.round(progress * 100)}%` }}
                     />

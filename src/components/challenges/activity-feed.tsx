@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { Activity, ChallengeMember } from "@/types";
 import { deleteManualActivity } from "@/lib/challenges/service";
+import { isLastOfKind } from "@/lib/challenges/variety";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,13 +12,39 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+function formatMinutes(seconds: number): string {
+  const minutes = Math.round(seconds / 60);
+  return minutes >= 60
+    ? `${Math.floor(minutes / 60)}h ${minutes % 60}m`
+    : `${minutes}m`;
+}
+
 function formatActivityStats(activity: Activity): string {
+  // Zone entries: show the points they earned (plus zone breakdown)
+  if (activity.zoneKind) {
+    const parts: string[] = [];
+    if (activity.zones) {
+      const zoneBits = (["z2", "z3", "z4", "z5"] as const)
+        .filter((z) => activity.zones![z] > 0)
+        .map((z) => `${z.toUpperCase()} ${Math.round(activity.zones![z])}m`);
+      if (zoneBits.length > 0) parts.push(zoneBits.join(" "));
+    } else if (activity.movingTime > 0) {
+      parts.push(formatMinutes(activity.movingTime));
+    }
+    parts.push(`${(activity.points ?? 0).toLocaleString()} pts`);
+    return parts.join(" · ");
+  }
+
+  // Variety entries: the name already carries the kind; just say it counts
+  if (activity.varietyKind) {
+    return "counts once";
+  }
+
   const parts: string[] = [];
   if (activity.distance > 0) {
     parts.push(`${(activity.distance / 1000).toFixed(1)} km`);
   }
-  const minutes = Math.round(activity.movingTime / 60);
-  parts.push(minutes >= 60 ? `${Math.floor(minutes / 60)}h ${minutes % 60}m` : `${minutes}m`);
+  parts.push(formatMinutes(activity.movingTime));
   return parts.join(" · ");
 }
 
@@ -36,7 +63,9 @@ export function ActivityFeed({
   async function handleDelete(activity: Activity) {
     setDeletingId(activity.id);
     try {
-      await deleteManualActivity(activity);
+      await deleteManualActivity(activity, {
+        isLastOfKind: isLastOfKind(activity, activities),
+      });
     } finally {
       setDeletingId(null);
     }
@@ -67,7 +96,6 @@ export function ActivityFeed({
                     {nameByUid.get(activity.uid) ?? "Former member"} ·{" "}
                     {activity.startDate.slice(0, 10)} ·{" "}
                     {formatActivityStats(activity)}
-                    {activity.source === "manual" && " · manual"}
                   </p>
                 </div>
                 {activity.source === "manual" &&

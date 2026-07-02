@@ -29,8 +29,10 @@ export function LogActivityForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
+  // Goal challenges always carry a sport; fall back defensively
+  const sport = challenge.sportType ?? "Other";
   const isDistanceSport = ["Run", "Ride", "Swim", "Walk", "Hike"].includes(
-    challenge.sportType
+    sport
   );
 
   async function handleSubmit(e: FormEvent) {
@@ -38,7 +40,7 @@ export function LogActivityForm({
     setError(null);
 
     const input = {
-      name: name || `${challenge.sportType} activity`,
+      name: name || `${sport} activity`,
       date,
       distanceKm: isDistanceSport ? Number(distanceKm) : 0,
       durationMinutes: Number(durationMinutes),
@@ -82,7 +84,7 @@ export function LogActivityForm({
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Log a {challenge.sportType} activity</CardTitle>
+        <CardTitle>Log a {sport} activity</CardTitle>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -90,7 +92,7 @@ export function LogActivityForm({
             <Label htmlFor="activityName">Name</Label>
             <Input
               id="activityName"
-              placeholder={`${challenge.sportType} activity`}
+              placeholder={`${sport} activity`}
               value={name}
               onChange={(e) => setName(e.target.value)}
             />

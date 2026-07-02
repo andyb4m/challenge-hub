@@ -3,7 +3,85 @@ import type {
   ChallengeGoal,
   ChallengeGoalUnit,
   ChallengeMember,
+  ChallengeScoring,
 } from "@/types";
+import { DEFAULT_ZONE_CONFIG, effectiveZonePoints } from "@/lib/challenges/zone";
+import { VARIETY_KINDS, varietyScore } from "@/lib/challenges/variety";
+
+/**
+ * Docs created before zone/variety challenges existed have no scoring
+ * field — they are all goal challenges.
+ */
+export function challengeScoring(
+  challenge: Pick<Challenge, "scoring">
+): ChallengeScoring {
+  return challenge.scoring ?? "goal";
+}
+
+/**
+ * A member's score for ANY challenge kind — the single source of truth
+ * for leaderboard order.
+ */
+export function memberScore(
+  challenge: Pick<Challenge, "scoring" | "goal" | "zoneConfig">,
+  member: ChallengeMember
+): number {
+  switch (challengeScoring(challenge)) {
+    case "goal":
+      return memberTotalInUnit(member, challenge.goal?.unit ?? "count");
+    case "zone":
+      return effectiveZonePoints(member, challenge.zoneConfig ?? DEFAULT_ZONE_CONFIG);
+    case "variety":
+      return varietyScore(member);
+  }
+}
+
+/** Leaderboard order for any challenge kind: highest score first. */
+export function rankMembersForChallenge(
+  challenge: Pick<Challenge, "scoring" | "goal" | "zoneConfig">,
+  members: ChallengeMember[]
+): ChallengeMember[] {
+  return [...members].sort(
+    (a, b) => memberScore(challenge, b) - memberScore(challenge, a)
+  );
+}
+
+/**
+ * Progress fraction [0, 1] for the member's bar. Goal challenges measure
+ * against the goal; variety against the full catalog; zone against the
+ * current leader (relative — there is no fixed points target).
+ */
+export function memberProgress(
+  challenge: Pick<Challenge, "scoring" | "goal" | "zoneConfig">,
+  member: ChallengeMember,
+  leaderScore: number
+): number {
+  const score = memberScore(challenge, member);
+  switch (challengeScoring(challenge)) {
+    case "goal":
+      return challenge.goal ? goalProgress(member, challenge.goal) : 0;
+    case "zone":
+      return leaderScore > 0 ? Math.min(score / leaderScore, 1) : 0;
+    case "variety":
+      return Math.min(score / VARIETY_KINDS.length, 1);
+  }
+}
+
+/** Right-hand score label on a leaderboard row. */
+export function formatScore(
+  challenge: Pick<Challenge, "scoring" | "goal" | "zoneConfig">,
+  member: ChallengeMember
+): string {
+  const score = memberScore(challenge, member);
+  switch (challengeScoring(challenge)) {
+    case "goal":
+      return formatTotal(score, challenge.goal?.unit ?? "count");
+    case "zone":
+      return `${score.toLocaleString()} pts`;
+    case "variety":
+      return `${score}/${VARIETY_KINDS.length} kinds`;
+  }
+}
 
 const METRES_PER_KM = 1000;
 const METRES_PER_MILE = 1609.344;
@@ -69,6 +147,22 @@ export function formatTotal(value: number, unit: ChallengeGoalUnit): string {
 
 export function formatGoal(goal: ChallengeGoal): string {
   return formatTotal(goal.value, goal.unit);
+}
+
+/** One-line description of what kind of challenge this is. */
+export function challengeSummary(
+  challenge: Pick<Challenge, "scoring" | "sportType" | "goal">
+): string {
+  switch (challengeScoring(challenge)) {
+    case "goal":
+      return `${challenge.sportType ?? "Sport"} · Goal: ${
+        challenge.goal ? formatGoal(challenge.goal) : "—"
+      }`;
+    case "zone":
+      return "Points challenge · HR zones, workouts & recovery + 80/20 bonus";
+    case "variety":
+      return `Variety challenge · most different sports (${VARIETY_KINDS.length} kinds)`;
+  }
 }
 
 export type ChallengeStatus = "upcoming" | "active" | "ended";

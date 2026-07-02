@@ -8,13 +8,16 @@ import {
   useMembers,
 } from "@/lib/challenges/hooks";
 import {
+  challengeScoring,
   challengeStatus,
-  formatGoal,
+  challengeSummary,
   localToday,
 } from "@/lib/challenges/scoring";
 import { Leaderboard } from "@/components/challenges/leaderboard";
 import { ActivityFeed } from "@/components/challenges/activity-feed";
 import { LogActivityForm } from "@/components/challenges/log-activity-form";
+import { ZoneLogForm } from "@/components/challenges/zone-log-form";
+import { VarietyLogForm } from "@/components/challenges/variety-log-form";
 import { InviteLinkButton } from "@/components/challenges/invite-link-button";
 
 function ChallengeDetail({ challengeId }: { challengeId: string }) {
@@ -52,8 +55,8 @@ function ChallengeDetail({ challengeId }: { challengeId: string }) {
           {isMember && <InviteLinkButton token={challenge.inviteToken} />}
         </div>
         <p className="text-sm text-muted">
-          {challenge.sportType} · Goal: {formatGoal(challenge.goal)} ·{" "}
-          {challenge.startDate} → {challenge.endDate}
+          {challengeSummary(challenge)} · {challenge.startDate} →{" "}
+          {challenge.endDate}
         </p>
         {challenge.description && (
           <p className="text-sm text-muted">{challenge.description}</p>
@@ -70,9 +73,28 @@ function ChallengeDetail({ challengeId }: { challengeId: string }) {
         )}
       </header>
 
-      {isMember && status === "active" && (
-        <LogActivityForm challenge={challenge} uid={user.uid} />
-      )}
+      {isMember &&
+        status === "active" &&
+        (() => {
+          switch (challengeScoring(challenge)) {
+            case "zone":
+              return (
+                <ZoneLogForm
+                  challenge={challenge}
+                  uid={user.uid}
+                  activities={activities}
+                />
+              );
+            case "variety": {
+              const me = members.find((m) => m.uid === user.uid);
+              return me ? (
+                <VarietyLogForm challenge={challenge} member={me} />
+              ) : null;
+            }
+            default:
+              return <LogActivityForm challenge={challenge} uid={user.uid} />;
+          }
+        })()}
 
       <Leaderboard
         challenge={challenge}

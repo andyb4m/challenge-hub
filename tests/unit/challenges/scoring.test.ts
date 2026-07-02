@@ -1,12 +1,19 @@
 import { describe, it, expect } from "vitest";
 import type { ChallengeMember } from "@/types";
 import {
+  challengeScoring,
   challengeStatus,
+  formatScore,
   formatTotal,
   goalProgress,
+  memberProgress,
+  memberScore,
   memberTotalInUnit,
   rankMembers,
+  rankMembersForChallenge,
 } from "@/lib/challenges/scoring";
+import { DEFAULT_ZONE_CONFIG } from "@/lib/challenges/zone";
+import { VARIETY_KINDS } from "@/lib/challenges/variety";
 
 function member(overrides: Partial<ChallengeMember>): ChallengeMember {
   return {
@@ -83,6 +90,81 @@ describe("goalProgress", () => {
 
   it("returns 0 for a non-positive goal value", () => {
     expect(goalProgress(member({}), { value: 0, unit: "count" })).toBe(0);
+  });
+});
+
+describe("memberScore / rankMembersForChallenge across challenge kinds", () => {
+  const goalChallenge = {
+    scoring: "goal" as const,
+    goal: { value: 100, unit: "distance_km" as const },
+    zoneConfig: null,
+  };
+  const zoneChallenge = {
+    scoring: "zone" as const,
+    goal: null,
+    zoneConfig: DEFAULT_ZONE_CONFIG,
+  };
+  const varietyChallenge = {
+    scoring: "variety" as const,
+    goal: null,
+    zoneConfig: null,
+  };
+
+  it("treats docs without a scoring field as goal challenges", () => {
+    expect(challengeScoring({ scoring: undefined })).toBe("goal");
+  });
+
+  it("scores goal members by their total in the goal unit", () => {
+    const m = member({ totalDistance: 42000 });
+    expect(memberScore(goalChallenge, m)).toBeCloseTo(42);
+    expect(formatScore(goalChallenge, m)).toBe("42 km");
+  });
+
+  it("scores zone members by effective points including the bonus", () => {
+    const m = member({
+      totalPoints: 100,
+      zoneMinutes: { z2: 80, z3: 0, z4: 20, z5: 0 },
+      recoveryCount: 0,
+    });
+    expect(memberScore(zoneChallenge, m)).toBe(115); // ×1.15 bonus
+    expect(formatScore(zoneChallenge, m)).toBe("115 pts");
+  });
+
+  it("scores variety members by distinct kinds", () => {
+    const m = member({ kinds: ["gym", "sup"] });
+    expect(memberScore(varietyChallenge, m)).toBe(2);
+    expect(formatScore(varietyChallenge, m)).toBe(
+      `2/${VARIETY_KINDS.length} kinds`
+    );
+  });
+
+  it("ranks zone members with the bonus applied", () => {
+    const bonusMember = member({
+      uid: "bonus",
+      totalPoints: 100,
+      zoneMinutes: { z2: 80, z3: 0, z4: 20, z5: 0 },
+      recoveryCount: 0,
+    }); // effective 115
+    const rawMember = member({
+      uid: "raw",
+      totalPoints: 110,
+      zoneMinutes: { z2: 0, z3: 0, z4: 100, z5: 0 },
+      recoveryCount: 0,
+    }); // effective 110
+    const ranked = rankMembersForChallenge(zoneChallenge, [rawMember, bonusMember]);
+    expect(ranked.map((m) => m.uid)).toEqual(["bonus", "raw"]);
+  });
+
+  it("measures zone progress relative to the leader", () => {
+    const m = member({ totalPoints: 50, zoneMinutes: { z2: 0, z3: 0, z4: 50, z5: 0 } });
+    expect(memberProgress(zoneChallenge, m, 200)).toBeCloseTo(0.25);
+  });
+
+  it("measures variety progress against the catalog size", () => {
+    const m = member({ kinds: ["gym", "yoga", "sup"] });
+    expect(memberProgress(varietyChallenge, m, 99)).toBeCloseTo(
+      3 / VARIETY_KINDS.length
+    );
   });
 });
 

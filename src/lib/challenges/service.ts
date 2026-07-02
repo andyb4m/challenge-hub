@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  arrayRemove,
   arrayUnion,
   collection,
   doc,
@@ -21,8 +22,13 @@ import {
   buildManualActivity,
   buildNewChallenge,
   buildNewMember,
+  buildVarietyActivity,
+  buildZoneActivity,
   type ManualActivityInput,
 } from "@/lib/challenges/challenge-doc";
+import { challengeScoring } from "@/lib/challenges/scoring";
+import type { ZoneActivityInput } from "@/lib/challenges/zone";
+import { varietyKindLabel } from "@/lib/challenges/variety";
 
 type MemberProfile = Pick<User, "uid" | "displayName" | "photoURL">;
 
@@ -44,7 +50,7 @@ export async function createChallenge(
   );
   batch.set(
     doc(db, COLLECTIONS.members(challengeRef.id), profile.uid),
-    buildNewMember(profile)
+    buildNewMember(profile, input.scoring)
   );
   batch.update(doc(db, COLLECTIONS.users, profile.uid), {
     challengeIds: arrayUnion(challengeRef.id),
@@ -71,20 +77,20 @@ export async function findChallengeByToken(
 
 /** Adds the user as a member. Callers check eligibility first. */
 export async function joinChallenge(
-  challengeId: string,
+  challenge: Pick<Challenge, "id" | "scoring">,
   profile: MemberProfile
 ): Promise<void> {
   const db = firestoreDb();
   const batch = writeBatch(db);
 
   batch.set(
-    doc(db, COLLECTIONS.members(challengeId), profile.uid),
-    buildNewMember(profile)
+    doc(db, COLLECTIONS.members(challenge.id), profile.uid),
+    buildNewMember(profile, challengeScoring(challenge))
   );
   batch.update(doc(db, COLLECTIONS.users, profile.uid), {
-    challengeIds: arrayUnion(challengeId),
+    challengeIds: arrayUnion(challenge.id),
   });
-  batch.update(doc(db, COLLECTIONS.challenges, challengeId), {
+  batch.update(doc(db, COLLECTIONS.challenges, challenge.id), {
     memberCount: increment(1),
   });
 
@@ -127,8 +133,69 @@ export async function logManualActivity(
   await batch.commit();
 }
 
-export async function deleteManualActivity(activity: Activity): Promise<void> {
+/**
+ * Writes a zone-challenge entry and updates the member's point/zone totals
+ * atomically. The 80/20 bonus is derived from these totals at render time.
+ */
+export async function logZoneActivity(
+  input: ZoneActivityInput & { date: string },
+  challenge: Pick<Challenge, "id" | "zoneConfig">,
+  uid: string
+): Promise<void> {
   const db = firestoreDb();
+  const activity = buildZoneActivity(input, challenge, uid);
+  const zones = activity.zones ?? { z2: 0, z3: 0, z4: 0, z5: 0 };
+  const batch = writeBatch(db);
+
+  batch.set(doc(collection(db, COLLECTIONS.activities(challenge.id))), activity);
+  batch.update(doc(db, COLLECTIONS.members(challenge.id), uid), {
+    totalPoints: increment(activity.points ?? 0),
+    totalDuration: increment(activity.movingTime),
+    activityCount: increment(1),
+    "zoneMinutes.z2": increment(zones.z2),
+    "zoneMinutes.z3": increment(zones.z3),
+    "zoneMinutes.z4": increment(zones.z4),
+    "zoneMinutes.z5": increment(zones.z5),
+    recoveryCount: increment(input.kind === "recovery" ? 1 : 0),
+  });
+
+  await batch.commit();
+}
+
+/** Writes a variety-challenge entry; the kind counts once via arrayUnion. */
+export async function logVarietyActivity(
+  input: { kindId: string; date: string },
+  challengeId: string,
+  uid: string
+): Promise<void> {
+  const db = firestoreDb();
+  const activity = buildVarietyActivity(
+    { ...input, label: varietyKindLabel(input.kindId) },
+    challengeId,
+    uid
+  );
+  const batch = writeBatch(db);
+
+  batch.set(doc(collection(db, COLLECTIONS.activities(challengeId))), activity);
+  batch.update(doc(db, COLLECTIONS.members(challengeId), uid), {
+    activityCount: increment(1),
+    kinds: arrayUnion(input.kindId),
+  });
+
+  await batch.commit();
+}
+
+/**
+ * Deletes any manual entry and reverses its contribution to the member's
+ * totals. `isLastOfKind` (variety only, computed from the loaded activity
+ * list) decides whether the kind stops counting.
+ */
+export async function deleteManualActivity(
+  activity: Activity,
+  options: { isLastOfKind?: boolean } = {}
+): Promise<void> {
+  const db = firestoreDb();
+  const zones = activity.zones ?? { z2: 0, z3: 0, z4: 0, z5: 0 };
   const batch = writeBatch(db);
 
   batch.delete(doc(db, COLLECTIONS.activities(activity.challengeId), activity.id));
@@ -136,6 +203,19 @@ export async function deleteManualActivity(activity: Activity): Promise<void> {
     totalDistance: increment(-activity.distance),
     totalDuration: increment(-activity.movingTime),
     activityCount: increment(-1),
+    ...(activity.zoneKind
+      ? {
+          totalPoints: increment(-(activity.points ?? 0)),
+          "zoneMinutes.z2": increment(-zones.z2),
+          "zoneMinutes.z3": increment(-zones.z3),
+          "zoneMinutes.z4": increment(-zones.z4),
+          "zoneMinutes.z5": increment(-zones.z5),
+          recoveryCount: increment(activity.zoneKind === "recovery" ? -1 : 0),
+        }
+      : {}),
+    ...(activity.varietyKind && options.isLastOfKind
+      ? { kinds: arrayRemove(activity.varietyKind) }
+      : {}),
   });
 
   await batch.commit();

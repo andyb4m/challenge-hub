@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { Challenge } from "@/types";
 import {
   challengeStatus,
-  formatGoal,
+  challengeSummary,
   localToday,
 } from "@/lib/challenges/scoring";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,9 +35,7 @@ export function ChallengeCard({ challenge }: { challenge: Challenge }) {
               {status}
             </span>
           </div>
-          <p className="text-sm text-muted">
-            {challenge.sportType} · Goal: {formatGoal(challenge.goal)}
-          </p>
+          <p className="text-sm text-muted">{challengeSummary(challenge)}</p>
           <p className="text-xs text-faint">
             {challenge.startDate} → {challenge.endDate} ·{" "}
             {challenge.memberCount}{" "}

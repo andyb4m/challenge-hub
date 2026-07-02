@@ -9,7 +9,7 @@ import {
   checkJoinEligibility,
   type JoinEligibility,
 } from "@/lib/challenges/invite";
-import { formatGoal, localToday } from "@/lib/challenges/scoring";
+import { challengeSummary, localToday } from "@/lib/challenges/scoring";
 import type { Challenge } from "@/types";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,7 +57,7 @@ function JoinContent({ token }: { token: string }) {
     setJoining(true);
     setError(null);
     try {
-      await joinChallenge(challenge.id, profile);
+      await joinChallenge(challenge, profile);
       router.push(`/challenges/${challenge.id}`);
     } catch {
       setError("Could not join the challenge. Please try again.");
@@ -70,8 +70,8 @@ function JoinContent({ token }: { token: string }) {
       <CardHeader>
         <CardTitle>You&apos;re invited: {challenge.name}</CardTitle>
         <CardDescription>
-          {challenge.sportType} · Goal: {formatGoal(challenge.goal)} ·{" "}
-          {challenge.startDate} → {challenge.endDate}
+          {challengeSummary(challenge)} · {challenge.startDate} →{" "}
+          {challenge.endDate}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col gap-3">
