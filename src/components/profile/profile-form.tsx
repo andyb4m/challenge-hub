@@ -22,6 +22,11 @@ import {
 
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
 
+// Firebase Storage requires the Blaze plan on new projects; the bucket isn't
+// set up yet, so photo upload stays hidden until this flag is flipped on.
+const PHOTO_UPLOAD_ENABLED =
+  process.env.NEXT_PUBLIC_ENABLE_PHOTO_UPLOAD === "true";
+
 export function ProfileForm({
   user,
   profile,
@@ -102,21 +107,30 @@ export function ProfileForm({
             </span>
           )}
           <div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={status.kind === "saving"}
-            >
-              Change photo
-            </Button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => handlePhotoChange(e.target.files?.[0])}
-            />
+            {PHOTO_UPLOAD_ENABLED ? (
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={status.kind === "saving"}
+                >
+                  Change photo
+                </Button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => handlePhotoChange(e.target.files?.[0])}
+                />
+              </>
+            ) : (
+              <p className="max-w-xs text-xs text-gray-400">
+                Photo upload isn&apos;t available yet. Accounts created with
+                Google use their Google profile photo.
+              </p>
+            )}
           </div>
         </div>
 

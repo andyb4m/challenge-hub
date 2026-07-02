@@ -8,6 +8,9 @@ jobs:
   deploy-preview:
     name: Netlify Deploy Preview
     runs-on: ubuntu-latest
+    env:
+      NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+      NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
     steps:
       - uses: actions/checkout@v4
 
@@ -32,7 +35,10 @@ jobs:
           NEXT_PUBLIC_BASE_URL: ${{ secrets.NEXT_PUBLIC_BASE_URL }}
           NEXT_PUBLIC_STRAVA_CLIENT_ID: ${{ secrets.NEXT_PUBLIC_STRAVA_CLIENT_ID }}
 
+      # Skipped until the Netlify site exists and its secrets are configured;
+      # the build step above still acts as a check that the app compiles.
       - name: Deploy to Netlify
+        if: env.NETLIFY_AUTH_TOKEN != ''
         uses: nwtgck/actions-netlify@v3
         with:
           publish-dir: ".next"
@@ -40,6 +46,3 @@ jobs:
           deploy-message: "Deploy Preview for PR #${{ github.event.number }}"
           enable-pull-request-comment: true
           enable-commit-comment: false
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}

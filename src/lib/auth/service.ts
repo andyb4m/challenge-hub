@@ -11,13 +11,17 @@ import {
 } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { auth, db, storage } from "@/lib/firebase/client";
+import {
+  firebaseAuth,
+  firestoreDb,
+  firebaseStorage,
+} from "@/lib/firebase/client";
 import { COLLECTIONS } from "@/lib/firebase/collections";
 import { buildNewUser } from "@/lib/auth/user-doc";
 import type { User } from "@/types";
 
 function userRef(uid: string) {
-  return doc(db, COLLECTIONS.users, uid);
+  return doc(firestoreDb(), COLLECTIONS.users, uid);
 }
 
 /**
@@ -43,7 +47,7 @@ export async function registerWithEmail(
   email: string,
   password: string
 ): Promise<void> {
-  const cred = await createUserWithEmailAndPassword(auth, email, password);
+  const cred = await createUserWithEmailAndPassword(firebaseAuth(), email, password);
   await updateProfile(cred.user, { displayName });
   await ensureUserDocument(cred.user, { displayName });
 }
@@ -52,16 +56,16 @@ export async function signInWithEmail(
   email: string,
   password: string
 ): Promise<void> {
-  await signInWithEmailAndPassword(auth, email, password);
+  await signInWithEmailAndPassword(firebaseAuth(), email, password);
 }
 
 export async function signInWithGoogle(): Promise<void> {
-  const cred = await signInWithPopup(auth, new GoogleAuthProvider());
+  const cred = await signInWithPopup(firebaseAuth(), new GoogleAuthProvider());
   await ensureUserDocument(cred.user);
 }
 
 export async function signOutUser(): Promise<void> {
-  await signOut(auth);
+  await signOut(firebaseAuth());
 }
 
 export async function updateDisplayName(
@@ -76,7 +80,7 @@ export async function uploadProfilePhoto(
   authUser: FirebaseUser,
   file: File
 ): Promise<string> {
-  const photoRef = ref(storage, `users/${authUser.uid}/profile`);
+  const photoRef = ref(firebaseStorage(), `users/${authUser.uid}/profile`);
   await uploadBytes(photoRef, file, { contentType: file.type });
   const photoURL = await getDownloadURL(photoRef);
   await updateProfile(authUser, { photoURL });

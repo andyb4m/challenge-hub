@@ -41,6 +41,14 @@ A Next.js 14 web platform that lets small friend groups create and compete in fi
 - [x] Site header with auth state in root layout; `RequireAuth` client-side guard for protected pages
 - [x] Tests: validation schemas (9) + user-doc mapping (4); full suite 24 passing
 - [x] Added missing `.eslintrc.json` (`next/core-web-vitals`) — `next lint` previously prompted interactively, which would have hung CI
+- [x] PR #1 opened; CI test job green
+- [x] **Switched Firebase project**: old `runningchallenge-6c1f8` abandoned (it had legacy collections from earlier experiments — not a fresh project). New project: **`challenge-hub-4917e`**, clean Firestore default database. Email/password + Google providers enabled, `firestore.rules` published.
+- [x] Manual verification on localhost: email register/login, Google sign-in, live profile updates all working
+- [x] Firebase client (`src/lib/firebase/client.ts`) converted to lazy init (`firebaseAuth()`, `firestoreDb()`, `firebaseStorage()` functions) — module-scope `getAuth()` crashed `next build` prerendering with `auth/invalid-api-key` when Firebase env vars were absent (broke the deploy-preview workflow)
+
+### Tech debt / deferred (update this list whenever Andreas says "skip for now")
+- [ ] **Firebase Storage not enabled** — new Firebase projects require the Blaze plan for Storage. Profile photo upload is fully implemented (`uploadProfilePhoto` in `src/lib/auth/service.ts`) but hidden behind `NEXT_PUBLIC_ENABLE_PHOTO_UPLOAD=true`. To re-enable: upgrade plan → enable Storage → publish Storage rules (allow `users/{uid}/{file}` write for owner) → set the flag. Note: Storage SDK retries failing uploads for minutes before rejecting, which looked like a hang in testing.
+- [ ] **Netlify deploy preview not configured** — the Deploy Preview workflow builds the app but skips the deploy step while `NETLIFY_AUTH_TOKEN` secret is absent. To enable: create Netlify site, add `NETLIFY_AUTH_TOKEN` + `NETLIFY_SITE_ID` repo secrets, plus `NEXT_PUBLIC_FIREBASE_*` secrets with the **new** (`challenge-hub-4917e`) project values.
 
 ### Not started yet
 - [ ] `feature/challenges-core` — challenge creation, invite links, join flow, leaderboard
@@ -55,9 +63,10 @@ A Next.js 14 web platform that lets small friend groups create and compete in fi
 Developer is on **Windows**, VS Code, Node.js v22. Dev server at `http://localhost:3000`.
 
 `.env.local` status:
-- `NEXT_PUBLIC_FIREBASE_*` — filled in (project: `runningchallenge-6c1f8`)
-- `FIREBASE_ADMIN_*` — **still needs service account key** (Firebase console → Project Settings → Service Accounts → Generate new private key)
+- `NEXT_PUBLIC_FIREBASE_*` — filled in (project: `challenge-hub-4917e`; the old `runningchallenge-6c1f8` values are dead)
+- `FIREBASE_ADMIN_*` — filled in (service account key generated for `challenge-hub-4917e`)
 - Strava values — **left blank**, fill in when credentials are available
+- `NEXT_PUBLIC_ENABLE_PHOTO_UPLOAD` — leave unset (see tech debt: Storage not enabled)
 
 ---
 

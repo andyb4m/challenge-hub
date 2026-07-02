@@ -9,7 +9,7 @@ import {
 } from "react";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { doc, onSnapshot } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase/client";
+import { firebaseAuth, firestoreDb } from "@/lib/firebase/client";
 import { COLLECTIONS } from "@/lib/firebase/collections";
 import { ensureUserDocument } from "@/lib/auth/service";
 import type { User } from "@/types";
@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let unsubscribeProfile: (() => void) | null = null;
 
-    const unsubscribeAuth = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribeAuth = onAuthStateChanged(firebaseAuth(), (firebaseUser) => {
       unsubscribeProfile?.();
       unsubscribeProfile = null;
 
@@ -55,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       unsubscribeProfile = onSnapshot(
-        doc(db, COLLECTIONS.users, firebaseUser.uid),
+        doc(firestoreDb(), COLLECTIONS.users, firebaseUser.uid),
         (snap) => {
           setProfile(snap.exists() ? (snap.data() as User) : null);
           setLoading(false);
