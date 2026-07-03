@@ -108,6 +108,13 @@ describe("memberScore / rankMembersForChallenge across challenge kinds", () => {
     scoring: "variety" as const,
     goal: null,
     zoneConfig: null,
+    varietyConfig: {
+      kinds: [
+        { id: "gym", label: "🏋️ Gym", maxCount: 2 },
+        { id: "yoga", label: "🧘 Yoga", maxCount: 1 },
+        { id: "sup", label: "🛶 SUP", maxCount: 1 },
+      ],
+    },
   };
 
   it("treats docs without a scoring field as goal challenges", () => {
@@ -130,12 +137,11 @@ describe("memberScore / rankMembersForChallenge across challenge kinds", () => {
     expect(formatScore(zoneChallenge, m)).toBe("115 pts");
   });
 
-  it("scores variety members by distinct kinds", () => {
-    const m = member({ kinds: ["gym", "sup"] });
-    expect(memberScore(varietyChallenge, m)).toBe(2);
-    expect(formatScore(varietyChallenge, m)).toBe(
-      `2/${VARIETY_KINDS.length} kinds`
-    );
+  it("scores variety members by clamped per-kind counts", () => {
+    // gym counts 2 of 3 logged (max 2), sup counts 1 → 3 of a possible 4
+    const m = member({ kindCounts: { gym: 3, sup: 1 } });
+    expect(memberScore(varietyChallenge, m)).toBe(3);
+    expect(formatScore(varietyChallenge, m)).toBe("3/4");
   });
 
   it("ranks zone members with the bonus applied", () => {
@@ -160,11 +166,16 @@ describe("memberScore / rankMembersForChallenge across challenge kinds", () => {
     expect(memberProgress(zoneChallenge, m, 200)).toBeCloseTo(0.25);
   });
 
-  it("measures variety progress against the catalog size", () => {
-    const m = member({ kinds: ["gym", "yoga", "sup"] });
-    expect(memberProgress(varietyChallenge, m, 99)).toBeCloseTo(
-      3 / VARIETY_KINDS.length
-    );
+  it("measures variety progress against the config's max score", () => {
+    const m = member({ kindCounts: { gym: 1, yoga: 1 } });
+    expect(memberProgress(varietyChallenge, m, 99)).toBeCloseTo(2 / 4);
+  });
+
+  it("falls back to the default catalog for variety docs without a config", () => {
+    const legacyChallenge = { ...varietyChallenge, varietyConfig: null };
+    const m = member({ kindCounts: { gym: 1 } });
+    expect(memberScore(legacyChallenge, m)).toBe(1);
+    expect(formatScore(legacyChallenge, m)).toBe(`1/${VARIETY_KINDS.length}`);
   });
 });
 

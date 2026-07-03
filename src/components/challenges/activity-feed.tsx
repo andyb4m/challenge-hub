@@ -3,7 +3,6 @@
 import { useState } from "react";
 import type { Activity, ChallengeMember } from "@/types";
 import { deleteManualActivity } from "@/lib/challenges/service";
-import { isLastOfKind } from "@/lib/challenges/variety";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -63,9 +62,7 @@ export function ActivityFeed({
   async function handleDelete(activity: Activity) {
     setDeletingId(activity.id);
     try {
-      await deleteManualActivity(activity, {
-        isLastOfKind: isLastOfKind(activity, activities),
-      });
+      await deleteManualActivity(activity);
     } finally {
       setDeletingId(null);
     }

@@ -7,6 +7,7 @@ export type {
   SportType,
   ChallengeGoal,
   ChallengeGoalUnit,
+  VarietyKindConfig,
   ZoneConfig,
 } from "./challenge";
 export type {

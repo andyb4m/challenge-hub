@@ -20,6 +20,7 @@ import { ZoneLogForm } from "@/components/challenges/zone-log-form";
 import { VarietyLogForm } from "@/components/challenges/variety-log-form";
 import { ZoneAnalytics } from "@/components/challenges/zone-analytics";
 import { VarietyCollection } from "@/components/challenges/variety-collection";
+import { VarietyManageCard } from "@/components/challenges/variety-manage-card";
 import { InviteLinkButton } from "@/components/challenges/invite-link-button";
 
 function ChallengeDetail({ challengeId }: { challengeId: string }) {
@@ -108,11 +109,19 @@ function ChallengeDetail({ challengeId }: { challengeId: string }) {
         <ZoneAnalytics challenge={challenge} members={members} />
       )}
 
-      {challengeScoring(challenge) === "variety" &&
-        (() => {
-          const me = members.find((m) => m.uid === user.uid);
-          return me ? <VarietyCollection member={me} /> : null;
-        })()}
+      {challengeScoring(challenge) === "variety" && (
+        <>
+          {(() => {
+            const me = members.find((m) => m.uid === user.uid);
+            return me ? (
+              <VarietyCollection challenge={challenge} member={me} />
+            ) : null;
+          })()}
+          {challenge.createdBy === user.uid && (
+            <VarietyManageCard challenge={challenge} />
+          )}
+        </>
+      )}
 
       <ActivityFeed
         activities={activities}

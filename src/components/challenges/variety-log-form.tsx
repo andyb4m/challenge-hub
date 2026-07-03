@@ -9,10 +9,7 @@ import {
 } from "@/lib/challenges/validation";
 import { firstError } from "@/lib/auth/validation";
 import { localToday } from "@/lib/challenges/scoring";
-import {
-  kindAlreadyCounted,
-  VARIETY_KINDS,
-} from "@/lib/challenges/variety";
+import { kindCountFor, varietyKinds } from "@/lib/challenges/variety";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,23 +23,29 @@ export function VarietyLogForm({
   challenge: Challenge;
   member: ChallengeMember;
 }) {
+  const kinds = varietyKinds(challenge);
   const [open, setOpen] = useState(false);
-  const [kindId, setKindId] = useState(VARIETY_KINDS[0].id);
+  const [kindId, setKindId] = useState(kinds[0]?.id ?? "");
   const [date, setDate] = useState(localToday());
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const alreadyCounted = kindAlreadyCounted(member, kindId);
+  const selected = kinds.find((k) => k.id === kindId);
+  const count = kindCountFor(member, kindId);
+  const maxed = selected !== undefined && count >= selected.maxCount;
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
 
-    const input = { kindId, date };
-    const parsed = varietyActivitySchema.safeParse(input);
+    const parsed = varietyActivitySchema.safeParse({ kindId, date });
     const validationError = firstError(parsed);
     if (validationError) {
       setError(validationError);
+      return;
+    }
+    if (!selected) {
+      setError("Pick an activity from the list.");
       return;
     }
     if (!isDateInChallengeWindow(date, challenge)) {
@@ -54,7 +57,11 @@ export function VarietyLogForm({
 
     setSubmitting(true);
     try {
-      await logVarietyActivity(input, challenge.id, member.uid);
+      await logVarietyActivity(
+        { kindId, label: selected.label, date },
+        challenge.id,
+        member.uid
+      );
       setOpen(false);
     } catch {
       setError("Could not save the activity. Please try again.");
@@ -85,17 +92,28 @@ export function VarietyLogForm({
               value={kindId}
               onChange={(e) => setKindId(e.target.value)}
             >
-              {VARIETY_KINDS.map((kind) => (
-                <option key={kind.id} value={kind.id}>
-                  {kind.emoji} {kind.label}
-                  {kindAlreadyCounted(member, kind.id) ? " ✓" : ""}
-                </option>
-              ))}
+              {kinds.map((kind) => {
+                const c = kindCountFor(member, kind.id);
+                return (
+                  <option key={kind.id} value={kind.id}>
+                    {kind.label}
+                    {kind.maxCount > 1 || c > 0
+                      ? ` (${Math.min(c, kind.maxCount)}/${kind.maxCount})`
+                      : ""}
+                    {c >= kind.maxCount ? " ✓" : ""}
+                  </option>
+                );
+              })}
             </Select>
-            {alreadyCounted && (
+            {selected && maxed && (
               <p className="text-xs text-warning">
-                Already counted — logging it again won&apos;t add to your
-                score.
+                Already fully counted ({selected.maxCount}×) — logging it
+                again won&apos;t add to your score.
+              </p>
+            )}
+            {selected && !maxed && selected.maxCount > 1 && (
+              <p className="text-xs text-muted">
+                Counted {count}/{selected.maxCount} so far.
               </p>
             )}
           </div>

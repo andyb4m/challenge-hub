@@ -17,6 +17,7 @@ const goalInput: CreateChallengeInput = {
   scoring: "goal",
   sportType: "Run",
   goal: { value: 100, unit: "distance_km" },
+  varietyConfig: null,
   startDate: "2026-07-01",
   endDate: "2026-07-31",
 };
@@ -31,6 +32,7 @@ describe("buildNewChallenge", () => {
       sportType: "Run",
       goal: { value: 100, unit: "distance_km" },
       zoneConfig: null,
+      varietyConfig: null,
       startDate: "2026-07-01",
       endDate: "2026-07-31",
       createdBy: "uid-1",
@@ -52,9 +54,15 @@ describe("buildNewChallenge", () => {
     expect(challenge.goal).toBeNull();
   });
 
-  it("builds a variety challenge without sport, goal, or zone config", () => {
+  it("builds a variety challenge carrying the creator's kind list", () => {
+    const config = {
+      kinds: [
+        { id: "gym", label: "🏋️ Gym", maxCount: 2 },
+        { id: "yoga", label: "🧘 Yoga", maxCount: 1 },
+      ],
+    };
     const challenge = buildNewChallenge(
-      { ...goalInput, scoring: "variety" },
+      { ...goalInput, scoring: "variety", varietyConfig: config },
       "uid-1",
       "t",
       now
@@ -63,6 +71,7 @@ describe("buildNewChallenge", () => {
     expect(challenge.sportType).toBeNull();
     expect(challenge.goal).toBeNull();
     expect(challenge.zoneConfig).toBeNull();
+    expect(challenge.varietyConfig).toEqual(config);
   });
 });
 
@@ -89,9 +98,9 @@ describe("buildNewMember", () => {
     expect(memberDoc.recoveryCount).toBe(0);
   });
 
-  it("adds an empty kinds list for variety challenges", () => {
+  it("adds an empty kind-count map for variety challenges", () => {
     const memberDoc = buildNewMember(profile, "variety", now);
-    expect(memberDoc.kinds).toEqual([]);
+    expect(memberDoc.kindCounts).toEqual({});
   });
 });
 

@@ -14,6 +14,7 @@ describe("createChallengeSchema", () => {
     scoring: "goal",
     sportType: "Run",
     goal: { value: 100, unit: "distance_km" },
+    varietyConfig: null,
     startDate: "2026-07-01",
     endDate: "2026-07-31",
   };
@@ -59,16 +60,88 @@ describe("createChallengeSchema", () => {
     );
   });
 
-  it("accepts zone and variety challenges without sport or goal", () => {
-    for (const scoring of ["zone", "variety"]) {
-      const result = createChallengeSchema.safeParse({
+  const varietyConfig = {
+    kinds: [
+      { id: "gym", label: "🏋️ Gym", maxCount: 2 },
+      { id: "yoga", label: "🧘 Yoga", maxCount: 1 },
+    ],
+  };
+
+  it("accepts a zone challenge without sport or goal", () => {
+    const result = createChallengeSchema.safeParse({
+      ...valid,
+      scoring: "zone",
+      sportType: null,
+      goal: null,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts a variety challenge with a kind list", () => {
+    const result = createChallengeSchema.safeParse({
+      ...valid,
+      scoring: "variety",
+      sportType: null,
+      goal: null,
+      varietyConfig,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects a variety challenge without a kind list", () => {
+    const result = createChallengeSchema.safeParse({
+      ...valid,
+      scoring: "variety",
+      sportType: null,
+      goal: null,
+      varietyConfig: null,
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a variety challenge with fewer than 2 kinds", () => {
+    const result = createChallengeSchema.safeParse({
+      ...valid,
+      scoring: "variety",
+      sportType: null,
+      goal: null,
+      varietyConfig: { kinds: varietyConfig.kinds.slice(0, 1) },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects duplicate kind ids and non-positive counts", () => {
+    const dupes = {
+      kinds: [
+        { id: "gym", label: "Gym", maxCount: 1 },
+        { id: "gym", label: "Gym again", maxCount: 1 },
+      ],
+    };
+    expect(
+      createChallengeSchema.safeParse({
         ...valid,
-        scoring,
+        scoring: "variety",
         sportType: null,
         goal: null,
-      });
-      expect(result.success).toBe(true);
-    }
+        varietyConfig: dupes,
+      }).success
+    ).toBe(false);
+
+    const zeroCount = {
+      kinds: [
+        { id: "gym", label: "Gym", maxCount: 0 },
+        { id: "yoga", label: "Yoga", maxCount: 1 },
+      ],
+    };
+    expect(
+      createChallengeSchema.safeParse({
+        ...valid,
+        scoring: "variety",
+        sportType: null,
+        goal: null,
+        varietyConfig: zeroCount,
+      }).success
+    ).toBe(false);
   });
 
   it("rejects a goal challenge without a goal", () => {

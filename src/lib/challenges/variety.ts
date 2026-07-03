@@ -1,87 +1,107 @@
-import type { Activity, ChallengeMember } from "@/types";
-
-export interface VarietyKind {
-  id: string;
-  label: string;
-  emoji: string;
-}
+import type { Challenge, ChallengeMember, VarietyKindConfig } from "@/types";
 
 /**
- * Catalog for variety challenges ("as many different kinds of activities
- * as possible — each kind counts once"). Translated from Andreas's list;
- * extend here when the group invents new sports.
+ * Default catalog for new variety challenges ("as many different kinds of
+ * activities as possible"). Translated from Andreas's list. The creator
+ * can add/remove kinds and set how often each counts, per challenge —
+ * this list only seeds the create form.
  */
-export const VARIETY_KINDS: VarietyKind[] = [
-  { id: "gym", label: "Gym / strength training", emoji: "🏋️" },
-  { id: "home-workout", label: "Home workout / bodyweight", emoji: "💪" },
-  { id: "running", label: "Running / jogging", emoji: "🏃" },
-  { id: "cycling", label: "Cycling (road / gravel / city)", emoji: "🚴" },
-  { id: "yoga", label: "Yoga", emoji: "🧘" },
-  { id: "pilates", label: "Pilates", emoji: "🤸" },
-  { id: "hiking", label: "Hiking / trail running", emoji: "🥾" },
-  { id: "climbing", label: "Climbing", emoji: "🧗" },
-  { id: "bouldering", label: "Bouldering", emoji: "🪨" },
-  { id: "slacklining", label: "Slacklining", emoji: "🤹" },
-  { id: "swimming", label: "Swimming", emoji: "🏊" },
-  { id: "sup", label: "Stand-up paddling (SUP)", emoji: "🛶" },
-  { id: "paddling", label: "Kayak / canoe / rowing", emoji: "🚣" },
-  { id: "surfing", label: "Surfing / windsurfing / kitesurfing", emoji: "🏄" },
-  { id: "wakeboarding", label: "Waterski / wakeboarding", emoji: "🌊" },
-  { id: "fishing", label: "Fly fishing / fishing", emoji: "🎣" },
-  { id: "beach-volleyball", label: "Beach volleyball", emoji: "🏐" },
-  { id: "squash", label: "Squash", emoji: "🎯" },
-  { id: "tennis", label: "Tennis", emoji: "🎾" },
-  { id: "table-tennis", label: "Table tennis", emoji: "🏓" },
-  { id: "football", label: "Football", emoji: "⚽" },
-  { id: "basketball", label: "Basketball / streetball", emoji: "🏀" },
-  { id: "spikeball", label: "Spikeball / roundnet", emoji: "🟡" },
-  { id: "frisbee", label: "Frisbee / Ultimate", emoji: "🥏" },
-  { id: "badminton", label: "Badminton", emoji: "🏸" },
-  { id: "padel", label: "Padel", emoji: "🎾" },
-  { id: "golf", label: "Golf / minigolf", emoji: "⛳" },
-  { id: "skating", label: "Inline / roller skating", emoji: "🛼" },
-  { id: "skateboarding", label: "Skateboarding / longboarding", emoji: "🛹" },
+export const VARIETY_KINDS: { id: string; label: string }[] = [
+  { id: "gym", label: "🏋️ Gym / strength training" },
+  { id: "home-workout", label: "💪 Home workout / bodyweight" },
+  { id: "running", label: "🏃 Running / jogging" },
+  { id: "cycling", label: "🚴 Cycling (road / gravel / city)" },
+  { id: "yoga", label: "🧘 Yoga" },
+  { id: "pilates", label: "🤸 Pilates" },
+  { id: "hiking", label: "🥾 Hiking / trail running" },
+  { id: "climbing", label: "🧗 Climbing" },
+  { id: "bouldering", label: "🪨 Bouldering" },
+  { id: "slacklining", label: "🤹 Slacklining" },
+  { id: "swimming", label: "🏊 Swimming" },
+  { id: "sup", label: "🛶 Stand-up paddling (SUP)" },
+  { id: "paddling", label: "🚣 Kayak / canoe / rowing" },
+  { id: "surfing", label: "🏄 Surfing / windsurfing / kitesurfing" },
+  { id: "wakeboarding", label: "🌊 Waterski / wakeboarding" },
+  { id: "fishing", label: "🎣 Fly fishing / fishing" },
+  { id: "beach-volleyball", label: "🏐 Beach volleyball" },
+  { id: "squash", label: "🎯 Squash" },
+  { id: "tennis", label: "🎾 Tennis" },
+  { id: "table-tennis", label: "🏓 Table tennis" },
+  { id: "football", label: "⚽ Football" },
+  { id: "basketball", label: "🏀 Basketball / streetball" },
+  { id: "spikeball", label: "🟡 Spikeball / roundnet" },
+  { id: "frisbee", label: "🥏 Frisbee / Ultimate" },
+  { id: "badminton", label: "🏸 Badminton" },
+  { id: "padel", label: "🎾 Padel" },
+  { id: "golf", label: "⛳ Golf / minigolf" },
+  { id: "skating", label: "🛼 Inline / roller skating" },
+  { id: "skateboarding", label: "🛹 Skateboarding / longboarding" },
 ];
 
-export const VARIETY_KIND_IDS = VARIETY_KINDS.map((k) => k.id);
-
-const kindById = new Map(VARIETY_KINDS.map((k) => [k.id, k]));
-
-export function varietyKindLabel(id: string): string {
-  const kind = kindById.get(id);
-  return kind ? `${kind.emoji} ${kind.label}` : id;
-}
-
-/** Distinct kinds a member has logged — the variety leaderboard score. */
-export function varietyScore(member: Pick<ChallengeMember, "kinds">): number {
-  return (member.kinds ?? []).length;
+/** Seed config for the create form: full catalog, everything counts once. */
+export function defaultVarietyKinds(): VarietyKindConfig[] {
+  return VARIETY_KINDS.map((k) => ({ ...k, maxCount: 1 }));
 }
 
 /**
- * Whether this kind already counts for the member. Logging it again is
- * allowed (diary value) but adds no score — the UI says so.
+ * The challenge's kind list. Falls back to the default catalog for docs
+ * created before configs existed.
  */
-export function kindAlreadyCounted(
-  member: Pick<ChallengeMember, "kinds">,
+export function varietyKinds(
+  challenge: Pick<Challenge, "varietyConfig">
+): VarietyKindConfig[] {
+  return challenge.varietyConfig?.kinds ?? defaultVarietyKinds();
+}
+
+export function varietyKindById(
+  challenge: Pick<Challenge, "varietyConfig">,
   kindId: string
-): boolean {
-  return (member.kinds ?? []).includes(kindId);
+): VarietyKindConfig | undefined {
+  return varietyKinds(challenge).find((k) => k.id === kindId);
+}
+
+export function kindCountFor(
+  member: Pick<ChallengeMember, "kindCounts">,
+  kindId: string
+): number {
+  return member.kindCounts?.[kindId] ?? 0;
 }
 
 /**
- * True when this activity is the member's only remaining activity of its
- * kind, i.e. deleting it must also un-count the kind. Decided from the
- * already-loaded activity list to keep the delete batch simple.
+ * Variety score: per kind, logged activities count up to the kind's
+ * maxCount. Kinds removed from the config score zero, and lowering a
+ * maxCount clamps retroactively — creator edits stay coherent mid-game.
  */
-export function isLastOfKind(
-  activity: Pick<Activity, "id" | "uid" | "varietyKind">,
-  allActivities: Pick<Activity, "id" | "uid" | "varietyKind">[]
-): boolean {
-  if (!activity.varietyKind) return false;
-  return !allActivities.some(
-    (a) =>
-      a.id !== activity.id &&
-      a.uid === activity.uid &&
-      a.varietyKind === activity.varietyKind
+export function varietyScore(
+  member: Pick<ChallengeMember, "kindCounts">,
+  kinds: VarietyKindConfig[]
+): number {
+  return kinds.reduce(
+    (sum, kind) => sum + Math.min(kindCountFor(member, kind.id), kind.maxCount),
+    0
   );
+}
+
+/** Highest score the config allows — the progress-bar denominator. */
+export function varietyMaxScore(kinds: VarietyKindConfig[]): number {
+  return kinds.reduce((sum, kind) => sum + kind.maxCount, 0);
+}
+
+/**
+ * Stable id for a creator-added kind. Slugified label; suffixed when it
+ * collides with an existing id.
+ */
+export function makeKindId(label: string, existingIds: string[]): string {
+  const base =
+    label
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "") // strip accents
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 30) || "kind";
+  if (!existingIds.includes(base)) return base;
+  let n = 2;
+  while (existingIds.includes(`${base}-${n}`)) n++;
+  return `${base}-${n}`;
 }

@@ -31,6 +31,18 @@ export interface ChallengeGoal {
 export type ChallengeScoring = "goal" | "zone" | "variety";
 
 /**
+ * One activity kind in a variety challenge. The creator manages the list
+ * per challenge and decides how often each kind may score.
+ */
+export interface VarietyKindConfig {
+  id: string;
+  /** display label, emoji included (e.g. "🧗 Climbing") */
+  label: string;
+  /** how many activities of this kind count toward the score */
+  maxCount: number;
+}
+
+/**
  * Zone-challenge rules, stored on the challenge doc at creation so old
  * challenges keep their original rules if defaults evolve.
  */
@@ -60,6 +72,8 @@ export interface Challenge {
   goal: ChallengeGoal | null;
   /** zone challenges only */
   zoneConfig?: ZoneConfig | null;
+  /** variety challenges only: the creator-managed kind list */
+  varietyConfig?: { kinds: VarietyKindConfig[] } | null;
   startDate: string; // ISO 8601 date (YYYY-MM-DD)
   endDate: string;   // ISO 8601 date (YYYY-MM-DD)
   createdBy: string; // uid
@@ -82,8 +96,11 @@ export interface ChallengeMember {
   zoneMinutes?: { z2: number; z3: number; z4: number; z5: number };
   /** zone challenges: number of recovery activities logged */
   recoveryCount?: number;
-  /** variety challenges: distinct activity kind ids already counted */
-  kinds?: string[];
+  /**
+   * variety challenges: how many activities of each kind the member has
+   * logged. The score clamps each count at the kind's maxCount.
+   */
+  kindCounts?: Record<string, number>;
 }
 
 export interface CreateChallengeInput {
@@ -94,6 +111,8 @@ export interface CreateChallengeInput {
   sportType: SportType | null;
   /** required when scoring === "goal" */
   goal: ChallengeGoal | null;
+  /** required when scoring === "variety" */
+  varietyConfig: { kinds: VarietyKindConfig[] } | null;
   startDate: string;
   endDate: string;
 }

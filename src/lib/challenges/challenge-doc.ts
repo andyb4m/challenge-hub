@@ -29,6 +29,7 @@ export function buildNewChallenge(
     // Rules are frozen onto the doc so future default changes don't
     // rewrite running/finished challenges
     zoneConfig: input.scoring === "zone" ? DEFAULT_ZONE_CONFIG : null,
+    varietyConfig: input.scoring === "variety" ? input.varietyConfig : null,
     startDate: input.startDate,
     endDate: input.endDate,
     createdBy,
@@ -61,7 +62,7 @@ export function buildNewMember(
     };
   }
   if (scoring === "variety") {
-    return { ...base, kinds: [] };
+    return { ...base, kindCounts: {} };
   }
   return base;
 }

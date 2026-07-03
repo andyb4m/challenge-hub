@@ -31,6 +31,31 @@ export const GOAL_UNIT_LABELS: Record<(typeof GOAL_UNITS)[number], string> = {
 
 export const CHALLENGE_SCORINGS = ["goal", "zone", "variety"] as const;
 
+export const varietyKindConfigSchema = z.object({
+  id: z.string().min(1).max(40),
+  label: z
+    .string()
+    .trim()
+    .min(1, "Give the activity a name")
+    .max(60, "Activity name must be at most 60 characters"),
+  maxCount: z
+    .number({ invalid_type_error: "Enter how often it counts" })
+    .int("Counts must be whole numbers")
+    .min(1, "Must count at least once")
+    .max(99, "99 is plenty"),
+});
+
+export const varietyConfigSchema = z.object({
+  kinds: z
+    .array(varietyKindConfigSchema)
+    .min(2, "A variety challenge needs at least 2 activities")
+    .max(100, "That's too many activities")
+    .refine(
+      (kinds) => new Set(kinds.map((k) => k.id)).size === kinds.length,
+      "Duplicate activities in the list"
+    ),
+});
+
 export const createChallengeSchema = z
   .object({
     name: z
@@ -54,6 +79,7 @@ export const createChallengeSchema = z
         unit: z.enum(GOAL_UNITS),
       })
       .nullable(),
+    varietyConfig: varietyConfigSchema.nullable(),
     startDate: dateString,
     endDate: dateString,
   })
@@ -64,6 +90,10 @@ export const createChallengeSchema = z
   .refine((c) => c.scoring !== "goal" || (c.sportType !== null && c.goal !== null), {
     message: "Goal challenges need a sport and a goal",
     path: ["goal"],
+  })
+  .refine((c) => c.scoring !== "variety" || c.varietyConfig !== null, {
+    message: "Variety challenges need an activity list",
+    path: ["varietyConfig"],
   });
 
 export const manualActivitySchema = z.object({

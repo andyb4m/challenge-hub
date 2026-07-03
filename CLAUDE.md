@@ -65,7 +65,14 @@ A Next.js 14 web platform that lets small friend groups create and compete in fi
 - [x] Tests: 116 passing (zone points/bonus/week-limit, variety catalog/score/last-of-kind, cross-kind ranking, schema unions)
 - [x] No firestore.rules changes needed (zone/variety entries are `source: "manual"` under the same activity rules)
 
-**Session-4 judgment calls for Andreas to review (also listed in the PR):** zone rules not editable in UI (SummerFit defaults, frozen per challenge); zone time entry = plain minute inputs, not legacy h:m:s segments; 80/20 bonus computed at render from stored member totals (no server functions yet); weekly recovery limit enforced client-side only; variety catalog fixed in code, no free-text kind; variety duplicates allowed but score once; zone progress bars relative to leader; zone/variety analytics table + cumulative points chart deferred.
+**Session-4 judgment calls for Andreas to review (also listed in the PR):** zone rules not editable in UI (SummerFit defaults, frozen per challenge); zone time entry = plain minute inputs, not legacy h:m:s segments; 80/20 bonus computed at render from stored member totals (no server functions yet); weekly recovery limit enforced client-side only; variety duplicates allowed but score only up to the kind's limit; zone progress bars relative to leader; cumulative points chart deferred.
+
+### Done in session 5 (Andreas's morning request)
+- [x] **Variety catalog is now per-challenge and creator-editable** (`Challenge.varietyConfig.kinds: {id, label, maxCount}[]`): rename/add/remove kinds and set how often each counts (×N), both in the create form and afterwards via a creator-only "Edit activities" card on the challenge page (`VarietyManageCard`; plain challenge-doc update, allowed by existing rules)
+- [x] Member model changed `kinds: string[]` → `kindCounts: Record<string, number>` (increments via `FieldPath` — kind ids contain hyphens, dot-paths reject them). Score = Σ min(count, maxCount); removed kinds score 0; lowered maxCount clamps retroactively. **Any variety challenge created from the branch before this change must be deleted/recreated** (nothing merged affected)
+- [x] Emoji folded into kind labels (single editable string); custom kinds get slugified ids (`makeKindId`)
+- [x] Collection card + log form show per-kind counted/max; leaderboard shows `score/maxScore`
+- [x] Tests: 124 passing
 
 ### Tech debt / deferred (update this list whenever Andreas says "skip for now")
 - [ ] **Firebase Storage not enabled** — new Firebase projects require the Blaze plan for Storage. Profile photo upload is fully implemented (`uploadProfilePhoto` in `src/lib/auth/service.ts`) but hidden behind `NEXT_PUBLIC_ENABLE_PHOTO_UPLOAD=true`. To re-enable: upgrade plan → enable Storage → publish Storage rules (allow `users/{uid}/{file}` write for owner) → set the flag. Note: Storage SDK retries failing uploads for minutes before rejecting, which looked like a hang in testing.

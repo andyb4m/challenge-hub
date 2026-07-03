@@ -17,7 +17,9 @@ import {
 } from "@/lib/challenges/validation";
 import { firstError } from "@/lib/auth/validation";
 import { localToday } from "@/lib/challenges/scoring";
-import { VARIETY_KINDS } from "@/lib/challenges/variety";
+import { defaultVarietyKinds } from "@/lib/challenges/variety";
+import { VarietyKindsEditor } from "@/components/challenges/variety-kinds-editor";
+import type { VarietyKindConfig } from "@/types";
 import { useAuth } from "@/lib/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,7 +56,7 @@ const SCORING_OPTIONS: {
     value: "variety",
     emoji: "🌈",
     label: "Variety",
-    blurb: `Most different sports wins — each of ${VARIETY_KINDS.length} kinds counts once`,
+    blurb: "Most different sports wins — you decide the list and how often each counts",
   },
 ];
 
@@ -67,6 +69,9 @@ export function ChallengeForm() {
   const [sportType, setSportType] = useState<SportType>("Run");
   const [goalValue, setGoalValue] = useState("");
   const [goalUnit, setGoalUnit] = useState<ChallengeGoalUnit>("distance_km");
+  const [varietyKinds, setVarietyKinds] = useState<VarietyKindConfig[]>(
+    defaultVarietyKinds
+  );
   const [startDate, setStartDate] = useState(localToday());
   const [endDate, setEndDate] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +89,10 @@ export function ChallengeForm() {
       scoring,
       sportType: isGoal ? sportType : null,
       goal: isGoal ? { value: Number(goalValue), unit: goalUnit } : null,
+      varietyConfig:
+        scoring === "variety"
+          ? { kinds: varietyKinds.map((k) => ({ ...k, label: k.label.trim() })) }
+          : null,
       startDate,
       endDate,
     };
@@ -231,14 +240,17 @@ export function ChallengeForm() {
           )}
 
           {scoring === "variety" && (
-            <div className="rounded-md border border-info/30 bg-info/10 px-4 py-3 text-sm text-info">
-              <p className="font-semibold">How variety scoring works</p>
-              <p className="mt-1 text-info/90">
-                Log activities from a catalog of {VARIETY_KINDS.length} sports —
-                from gym to slacklining to fly fishing. Each kind counts once;
-                whoever collects the most different kinds wins.
-              </p>
-            </div>
+            <>
+              <div className="rounded-md border border-info/30 bg-info/10 px-4 py-3 text-sm text-info">
+                <p className="font-semibold">How variety scoring works</p>
+                <p className="mt-1 text-info/90">
+                  Whoever collects the most activities from the list wins.
+                  Each kind counts up to ×N times — set that per activity
+                  below. You can edit the list later too.
+                </p>
+              </div>
+              <VarietyKindsEditor kinds={varietyKinds} onChange={setVarietyKinds} />
+            </>
           )}
 
           <div className="grid grid-cols-2 gap-3">
