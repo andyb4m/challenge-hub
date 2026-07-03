@@ -15,7 +15,7 @@ export function HubHeader({
 }) {
   return (
     <Card>
-      <CardContent className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           {profile.photoURL ? (
             // eslint-disable-next-line @next/next/no-img-element
