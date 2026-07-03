@@ -3,14 +3,27 @@
 import Link from "next/link";
 import { RequireAuth } from "@/components/auth/require-auth";
 import { ChallengeCard } from "@/components/challenges/challenge-card";
-import { useMyChallenges } from "@/lib/challenges/hooks";
+import { HubHeader } from "@/components/challenges/hub-header";
+import { useAuth } from "@/lib/auth/auth-context";
+import { useMyChallenges, useMyOverview } from "@/lib/challenges/hooks";
 import { Button } from "@/components/ui/button";
 
 function ChallengesContent() {
+  const { profile } = useAuth();
   const { challenges, isLoading } = useMyChallenges();
+  const overview = useMyOverview(challenges);
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-4 py-8">
+      {profile && (
+        <HubHeader
+          profile={profile}
+          activeChallengeCount={overview.activeChallengeCount}
+          totalActivities={overview.totalActivities}
+          lastActivity={overview.lastActivity}
+        />
+      )}
+
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Your challenges</h1>
         <Link href="/challenges/new">

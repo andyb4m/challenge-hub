@@ -99,6 +99,7 @@ export function ProfileForm({
             <img
               src={profile.photoURL}
               alt="Profile photo"
+              referrerPolicy="no-referrer"
               className="h-16 w-16 rounded-full object-cover"
             />
           ) : (

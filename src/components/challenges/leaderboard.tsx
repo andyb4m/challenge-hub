@@ -71,6 +71,7 @@ export function Leaderboard({
                   <img
                     src={member.photoURL}
                     alt=""
+                    referrerPolicy="no-referrer"
                     className="h-8 w-8 rounded-full object-cover"
                   />
                 ) : (

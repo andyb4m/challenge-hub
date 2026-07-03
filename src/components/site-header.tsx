@@ -39,6 +39,7 @@ export function SiteHeader() {
                 <img
                   src={profile.photoURL}
                   alt=""
+                  referrerPolicy="no-referrer"
                   className="h-7 w-7 rounded-full object-cover"
                 />
               ) : (
