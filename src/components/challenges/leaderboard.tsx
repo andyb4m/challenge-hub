@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+const ZONE_KEYS = ["z2", "z3", "z4", "z5"] as const;
+
 function leaderboardBlurb(challenge: Challenge): string {
   switch (challengeScoring(challenge)) {
     case "goal":
@@ -110,6 +112,19 @@ export function Leaderboard({
                       style={{ width: `${Math.round(progress * 100)}%` }}
                     />
                   </div>
+                  {scoring === "zone" && (
+                    <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-faint">
+                      <span>
+                        {member.activityCount}{" "}
+                        {member.activityCount === 1 ? "activity" : "activities"}
+                      </span>
+                      {ZONE_KEYS.map((zone) => (
+                        <span key={zone} className="uppercase">
+                          {zone} {Math.round(member.zoneMinutes?.[zone] ?? 0)}m
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               </li>
             );

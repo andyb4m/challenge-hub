@@ -6,12 +6,8 @@ import {
   doc,
   FieldPath,
   getDoc,
-  getDocs,
   increment,
-  limit,
-  query,
   updateDoc,
-  where,
   writeBatch,
 } from "firebase/firestore";
 import { firestoreDb } from "@/lib/firebase/client";
@@ -65,19 +61,18 @@ export async function createChallenge(
   return challengeRef.id;
 }
 
+/**
+ * Looks up a challenge by its invite token via the server (Admin SDK), not
+ * a client Firestore query — challenges/{id} reads are member-only, and a
+ * non-member must be able to preview a challenge before joining it.
+ */
 export async function findChallengeByToken(
   token: string
 ): Promise<Challenge | null> {
-  const snapshot = await getDocs(
-    query(
-      collection(firestoreDb(), COLLECTIONS.challenges),
-      where("inviteToken", "==", token),
-      limit(1)
-    )
-  );
-  if (snapshot.empty) return null;
-  const docSnap = snapshot.docs[0];
-  return { id: docSnap.id, ...docSnap.data() } as Challenge;
+  const res = await fetch(`/api/invite/${encodeURIComponent(token)}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error("Failed to look up invite");
+  return (await res.json()) as Challenge;
 }
 
 /** Adds the user as a member. Callers check eligibility first. */

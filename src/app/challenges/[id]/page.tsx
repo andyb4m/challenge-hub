@@ -19,6 +19,8 @@ import { LogActivityForm } from "@/components/challenges/log-activity-form";
 import { ZoneLogForm } from "@/components/challenges/zone-log-form";
 import { VarietyLogForm } from "@/components/challenges/variety-log-form";
 import { ZoneAnalytics } from "@/components/challenges/zone-analytics";
+import { ProgressChart } from "@/components/challenges/progress-chart";
+import { buildZoneProgressChart } from "@/lib/challenges/progress-chart";
 import { VarietyCollection } from "@/components/challenges/variety-collection";
 import { VarietyManageCard } from "@/components/challenges/variety-manage-card";
 import { InviteLinkButton } from "@/components/challenges/invite-link-button";
@@ -106,7 +108,10 @@ function ChallengeDetail({ challengeId }: { challengeId: string }) {
       />
 
       {challengeScoring(challenge) === "zone" && (
-        <ZoneAnalytics challenge={challenge} members={members} />
+        <>
+          <ZoneAnalytics challenge={challenge} members={members} />
+          <ProgressChart data={buildZoneProgressChart(activities, members)} />
+        </>
       )}
 
       {challengeScoring(challenge) === "variety" && (
