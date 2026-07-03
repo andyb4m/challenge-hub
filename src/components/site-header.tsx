@@ -16,17 +16,23 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="border-b border-gray-200 bg-white">
+    <header className="sticky top-0 z-10 border-b border-line bg-background/90 backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4">
-        <Link href="/" className="font-semibold text-gray-900">
+        <Link href="/" className="font-semibold text-foreground">
           Challenge Hub
         </Link>
 
         {loading ? null : user ? (
           <nav className="flex items-center gap-3">
             <Link
+              href="/challenges"
+              className="text-sm text-muted hover:text-foreground"
+            >
+              Challenges
+            </Link>
+            <Link
               href="/profile"
-              className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900"
+              className="flex items-center gap-2 text-sm text-muted hover:text-foreground"
             >
               {profile?.photoURL ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -36,7 +42,7 @@ export function SiteHeader() {
                   className="h-7 w-7 rounded-full object-cover"
                 />
               ) : (
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-200 text-xs font-medium text-gray-600">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-line text-xs font-medium text-muted">
                   {(profile?.displayName ?? "?").charAt(0).toUpperCase()}
                 </span>
               )}

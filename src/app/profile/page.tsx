@@ -12,7 +12,7 @@ function ProfileContent() {
   if (!user || !profile) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center">
-        <p className="text-sm text-gray-500">Loading profile…</p>
+        <p className="text-sm text-muted">Loading profile…</p>
       </div>
     );
   }

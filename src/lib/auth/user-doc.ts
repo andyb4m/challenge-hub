@@ -25,5 +25,6 @@ export function buildNewUser(
     photoURL: authUser.photoURL,
     createdAt: now.toISOString(),
     strava: null,
+    challengeIds: [],
   };
 }

@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   signInWithEmail,
   signInWithGoogle,
   friendlyAuthError,
 } from "@/lib/auth/service";
 import { loginSchema, firstError } from "@/lib/auth/validation";
+import { safeNextPath } from "@/lib/auth/redirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,8 +22,9 @@ import {
 } from "@/components/ui/card";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const next = safeNextPath(useSearchParams().get("next"));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +44,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await signInWithEmail(email.trim(), password);
-      router.push("/profile");
+      router.push(next);
     } catch (err) {
       setError(friendlyAuthError(err));
       setSubmitting(false);
@@ -54,7 +56,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await signInWithGoogle();
-      router.push("/profile");
+      router.push(next);
     } catch (err) {
       setError(friendlyAuthError(err));
       setSubmitting(false);
@@ -95,7 +97,7 @@ export default function LoginPage() {
               />
             </div>
             {error && (
-              <p role="alert" className="text-sm text-red-600">
+              <p role="alert" className="text-sm text-error">
                 {error}
               </p>
             )}
@@ -105,21 +107,33 @@ export default function LoginPage() {
           </form>
 
           <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-gray-200" />
-            <span className="text-xs uppercase text-gray-400">or</span>
-            <div className="h-px flex-1 bg-gray-200" />
+            <div className="h-px flex-1 bg-line" />
+            <span className="text-xs uppercase text-faint">or</span>
+            <div className="h-px flex-1 bg-line" />
           </div>
 
           <GoogleSignInButton onClick={handleGoogle} disabled={submitting} />
 
-          <p className="text-center text-sm text-gray-500">
+          <p className="text-center text-sm text-muted">
             No account yet?{" "}
-            <Link href="/register" className="font-medium text-gray-900 underline">
+            <Link
+              href={`/register?next=${encodeURIComponent(next)}`}
+              className="font-medium text-foreground underline"
+            >
               Register
             </Link>
           </p>
         </CardContent>
       </Card>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  // useSearchParams requires a Suspense boundary during prerendering
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
   );
 }

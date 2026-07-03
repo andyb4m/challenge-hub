@@ -22,6 +22,7 @@ describe("buildNewUser", () => {
       photoURL: "https://example.com/photo.jpg",
       createdAt: "2026-07-02T10:00:00.000Z",
       strava: null,
+      challengeIds: [],
     });
   });
 

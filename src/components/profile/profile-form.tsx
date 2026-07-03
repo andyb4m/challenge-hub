@@ -102,7 +102,7 @@ export function ProfileForm({
               className="h-16 w-16 rounded-full object-cover"
             />
           ) : (
-            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-gray-200 text-xl font-medium text-gray-600">
+            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-line text-xl font-medium text-muted">
               {profile.displayName.charAt(0).toUpperCase()}
             </span>
           )}
@@ -126,7 +126,7 @@ export function ProfileForm({
                 />
               </>
             ) : (
-              <p className="max-w-xs text-xs text-gray-400">
+              <p className="max-w-xs text-xs text-faint">
                 Photo upload isn&apos;t available yet. Accounts created with
                 Google use their Google profile photo.
               </p>
@@ -149,12 +149,12 @@ export function ProfileForm({
           </div>
 
           {status.kind === "error" && (
-            <p role="alert" className="text-sm text-red-600">
+            <p role="alert" className="text-sm text-error">
               {status.message}
             </p>
           )}
           {status.kind === "saved" && (
-            <p className="text-sm text-green-600">Saved.</p>
+            <p className="text-sm text-success">Saved.</p>
           )}
 
           <Button

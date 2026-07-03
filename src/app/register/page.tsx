@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   registerWithEmail,
   signInWithGoogle,
   friendlyAuthError,
 } from "@/lib/auth/service";
 import { registerSchema, firstError } from "@/lib/auth/validation";
+import { safeNextPath } from "@/lib/auth/redirect";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,8 +22,9 @@ import {
 } from "@/components/ui/card";
 import { GoogleSignInButton } from "@/components/auth/google-sign-in-button";
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const next = safeNextPath(useSearchParams().get("next"));
   const [displayName, setDisplayName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -43,7 +45,7 @@ export default function RegisterPage() {
     setSubmitting(true);
     try {
       await registerWithEmail(displayName.trim(), email.trim(), password);
-      router.push("/profile");
+      router.push(next);
     } catch (err) {
       setError(friendlyAuthError(err));
       setSubmitting(false);
@@ -55,7 +57,7 @@ export default function RegisterPage() {
     setSubmitting(true);
     try {
       await signInWithGoogle();
-      router.push("/profile");
+      router.push(next);
     } catch (err) {
       setError(friendlyAuthError(err));
       setSubmitting(false);
@@ -104,10 +106,10 @@ export default function RegisterPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-              <p className="text-xs text-gray-400">At least 8 characters.</p>
+              <p className="text-xs text-faint">At least 8 characters.</p>
             </div>
             {error && (
-              <p role="alert" className="text-sm text-red-600">
+              <p role="alert" className="text-sm text-error">
                 {error}
               </p>
             )}
@@ -117,21 +119,33 @@ export default function RegisterPage() {
           </form>
 
           <div className="flex items-center gap-3">
-            <div className="h-px flex-1 bg-gray-200" />
-            <span className="text-xs uppercase text-gray-400">or</span>
-            <div className="h-px flex-1 bg-gray-200" />
+            <div className="h-px flex-1 bg-line" />
+            <span className="text-xs uppercase text-faint">or</span>
+            <div className="h-px flex-1 bg-line" />
           </div>
 
           <GoogleSignInButton onClick={handleGoogle} disabled={submitting} />
 
-          <p className="text-center text-sm text-gray-500">
+          <p className="text-center text-sm text-muted">
             Already have an account?{" "}
-            <Link href="/login" className="font-medium text-gray-900 underline">
+            <Link
+              href={`/login?next=${encodeURIComponent(next)}`}
+              className="font-medium text-foreground underline"
+            >
               Sign in
             </Link>
           </p>
         </CardContent>
       </Card>
     </main>
+  );
+}
+
+export default function RegisterPage() {
+  // useSearchParams requires a Suspense boundary during prerendering
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
   );
 }
