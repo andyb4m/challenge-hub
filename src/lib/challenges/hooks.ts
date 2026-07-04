@@ -92,6 +92,7 @@ export function useActivities(challengeId: string) {
 export interface MyOverview {
   totalActivities: number;
   activeChallengeCount: number;
+  totalChallengeCount: number;
   lastActivity: RecentActivity | null;
   isLoading: boolean;
 }
@@ -122,6 +123,7 @@ export function useMyOverview(challenges: Challenge[]): MyOverview {
     activeChallengeCount: challenges.filter(
       (c) => challengeStatus(c, localToday()) === "active"
     ).length,
+    totalChallengeCount: challenges.length,
     isLoading,
   };
 }

@@ -19,6 +19,7 @@ function ChallengesContent() {
         <HubHeader
           profile={profile}
           activeChallengeCount={overview.activeChallengeCount}
+          totalChallengeCount={overview.totalChallengeCount}
           totalActivities={overview.totalActivities}
           lastActivity={overview.lastActivity}
         />
