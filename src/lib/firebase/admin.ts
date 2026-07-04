@@ -1,8 +1,14 @@
 import { initializeApp, getApps, cert, type App } from "firebase-admin/app";
-import { getFirestore } from "firebase-admin/firestore";
-import { getAuth } from "firebase-admin/auth";
+import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import { getAuth, type Auth } from "firebase-admin/auth";
 
-function getAdminApp(): App {
+// Initialized lazily so that importing this module never touches Firebase.
+// cert() throws when FIREBASE_ADMIN_* env vars are absent, which breaks
+// `next build` page-data collection for any route that imports this module
+// in environments without admin credentials configured (e.g. the
+// deploy-preview workflow before secrets are set — same class of bug as
+// the client SDK's lazy init in firebase/client.ts).
+function adminApp(): App {
   if (getApps().length > 0) return getApps()[0];
 
   return initializeApp({
@@ -14,7 +20,10 @@ function getAdminApp(): App {
   });
 }
 
-const adminApp = getAdminApp();
+export function adminDb(): Firestore {
+  return getFirestore(adminApp());
+}
 
-export const adminDb = getFirestore(adminApp);
-export const adminAuth = getAuth(adminApp);
+export function adminAuth(): Auth {
+  return getAuth(adminApp());
+}

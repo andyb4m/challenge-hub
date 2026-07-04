@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { RequireAuth } from "@/components/auth/require-auth";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
@@ -19,6 +20,8 @@ import { LogActivityForm } from "@/components/challenges/log-activity-form";
 import { ZoneLogForm } from "@/components/challenges/zone-log-form";
 import { VarietyLogForm } from "@/components/challenges/variety-log-form";
 import { ZoneAnalytics } from "@/components/challenges/zone-analytics";
+import { ProgressChart } from "@/components/challenges/progress-chart";
+import { buildZoneProgressChart } from "@/lib/challenges/progress-chart";
 import { VarietyCollection } from "@/components/challenges/variety-collection";
 import { VarietyManageCard } from "@/components/challenges/variety-manage-card";
 import { InviteLinkButton } from "@/components/challenges/invite-link-button";
@@ -51,6 +54,12 @@ function ChallengeDetail({ challengeId }: { challengeId: string }) {
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-4 py-8">
       <header className="flex flex-col gap-2">
+        <Link
+          href="/challenges"
+          className="flex items-center gap-1 text-sm text-muted hover:text-foreground"
+        >
+          ← Challenges
+        </Link>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h1 className="text-2xl font-bold text-foreground">
             {challenge.name}
@@ -106,7 +115,10 @@ function ChallengeDetail({ challengeId }: { challengeId: string }) {
       />
 
       {challengeScoring(challenge) === "zone" && (
-        <ZoneAnalytics challenge={challenge} members={members} />
+        <>
+          <ZoneAnalytics challenge={challenge} members={members} />
+          <ProgressChart data={buildZoneProgressChart(activities, members)} />
+        </>
       )}
 
       {challengeScoring(challenge) === "variety" && (

@@ -12,7 +12,13 @@ import useSWR from "swr";
 import { firestoreDb } from "@/lib/firebase/client";
 import { COLLECTIONS } from "@/lib/firebase/collections";
 import { useAuth } from "@/lib/auth/auth-context";
-import { fetchChallengesByIds } from "@/lib/challenges/service";
+import {
+  fetchChallengesByIds,
+  fetchMyActivityCount,
+  fetchMyLastActivity,
+  type RecentActivity,
+} from "@/lib/challenges/service";
+import { challengeStatus, localToday } from "@/lib/challenges/scoring";
 import type { Activity, Challenge, ChallengeMember } from "@/types";
 
 /** The signed-in user's challenges; refetches when their membership changes. */
@@ -81,4 +87,43 @@ export function useActivities(challengeId: string) {
   }, [challengeId]);
 
   return activities;
+}
+
+export interface MyOverview {
+  totalActivities: number;
+  activeChallengeCount: number;
+  totalChallengeCount: number;
+  lastActivity: RecentActivity | null;
+  isLoading: boolean;
+}
+
+/** Quick-glance stats for the signed-in user across all their challenges. */
+export function useMyOverview(challenges: Challenge[]): MyOverview {
+  const { profile } = useAuth();
+  const uid = profile?.uid;
+  const challengeIds = challenges.map((c) => c.id);
+
+  const { data, isLoading } = useSWR(
+    uid ? ["my-overview", uid, ...challengeIds] : null,
+    async () => {
+      if (challengeIds.length === 0) {
+        return { totalActivities: 0, lastActivity: null };
+      }
+      const [totalActivities, lastActivity] = await Promise.all([
+        fetchMyActivityCount(challengeIds, uid!),
+        fetchMyLastActivity(challenges, uid!),
+      ]);
+      return { totalActivities, lastActivity };
+    }
+  );
+
+  return {
+    totalActivities: data?.totalActivities ?? 0,
+    lastActivity: data?.lastActivity ?? null,
+    activeChallengeCount: challenges.filter(
+      (c) => challengeStatus(c, localToday()) === "active"
+    ).length,
+    totalChallengeCount: challenges.length,
+    isLoading,
+  };
 }

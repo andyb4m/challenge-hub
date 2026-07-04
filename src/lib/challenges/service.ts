@@ -8,10 +8,9 @@ import {
   getDoc,
   getDocs,
   increment,
-  limit,
+  orderBy,
   query,
   updateDoc,
-  where,
   writeBatch,
 } from "firebase/firestore";
 import { firestoreDb } from "@/lib/firebase/client";
@@ -19,6 +18,7 @@ import { COLLECTIONS } from "@/lib/firebase/collections";
 import type {
   Activity,
   Challenge,
+  ChallengeMember,
   CreateChallengeInput,
   User,
   VarietyKindConfig,
@@ -65,19 +65,18 @@ export async function createChallenge(
   return challengeRef.id;
 }
 
+/**
+ * Looks up a challenge by its invite token via the server (Admin SDK), not
+ * a client Firestore query — challenges/{id} reads are member-only, and a
+ * non-member must be able to preview a challenge before joining it.
+ */
 export async function findChallengeByToken(
   token: string
 ): Promise<Challenge | null> {
-  const snapshot = await getDocs(
-    query(
-      collection(firestoreDb(), COLLECTIONS.challenges),
-      where("inviteToken", "==", token),
-      limit(1)
-    )
-  );
-  if (snapshot.empty) return null;
-  const docSnap = snapshot.docs[0];
-  return { id: docSnap.id, ...docSnap.data() } as Challenge;
+  const res = await fetch(`/api/invite/${encodeURIComponent(token)}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error("Failed to look up invite");
+  return (await res.json()) as Challenge;
 }
 
 /** Adds the user as a member. Callers check eligibility first. */
@@ -246,4 +245,65 @@ export async function deleteManualActivity(activity: Activity): Promise<void> {
   }
 
   await batch.commit();
+}
+
+export interface RecentActivity {
+  challengeId: string;
+  challengeName: string;
+  name: string;
+  startDate: string;
+}
+
+/** Sum of the user's activityCount across all of their challenges. */
+export async function fetchMyActivityCount(
+  challengeIds: string[],
+  uid: string
+): Promise<number> {
+  const db = firestoreDb();
+  const snapshots = await Promise.all(
+    challengeIds.map((id) => getDoc(doc(db, COLLECTIONS.members(id), uid)))
+  );
+  return snapshots.reduce((sum, snap) => {
+    const member = snap.data() as ChallengeMember | undefined;
+    return sum + (member?.activityCount ?? 0);
+  }, 0);
+}
+
+/**
+ * The user's most recent activity across all of their challenges. Fetches
+ * each challenge's full activity feed (ordered by startDate, same
+ * single-field index useActivities already relies on) and filters by uid
+ * client-side, rather than a where+orderBy query, which would need a
+ * composite index this project doesn't define.
+ */
+export async function fetchMyLastActivity(
+  challenges: Pick<Challenge, "id" | "name">[],
+  uid: string
+): Promise<RecentActivity | null> {
+  const db = firestoreDb();
+  const perChallenge = await Promise.all(
+    challenges.map(async (challenge) => {
+      const snapshot = await getDocs(
+        query(
+          collection(db, COLLECTIONS.activities(challenge.id)),
+          orderBy("startDate", "desc")
+        )
+      );
+      const mineDoc = snapshot.docs.find((d) => (d.data() as Activity).uid === uid);
+      if (!mineDoc) return null;
+      const activity = mineDoc.data() as Activity;
+      return {
+        challengeId: challenge.id,
+        challengeName: challenge.name,
+        name: activity.name,
+        startDate: activity.startDate,
+      };
+    })
+  );
+
+  const mine = perChallenge.filter((a): a is RecentActivity => a !== null);
+  if (mine.length === 0) return null;
+  return mine.reduce((latest, current) =>
+    current.startDate > latest.startDate ? current : latest
+  );
 }
