@@ -1,6 +1,6 @@
 import type { User } from "@/types";
 import type { RecentActivity } from "@/lib/challenges/service";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 
 export function HubHeader({
   profile,
@@ -14,8 +14,8 @@ export function HubHeader({
   lastActivity: RecentActivity | null;
 }) {
   return (
-    <Card>
-      <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
+    <Card className="overflow-hidden">
+      <div className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           {profile.photoURL ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -48,11 +48,11 @@ export function HubHeader({
           </div>
         </div>
 
-        <div className="flex gap-6 self-start sm:self-auto">
+        <div className="flex gap-6">
           <Stat label="Active challenges" value={activeChallengeCount} />
           <Stat label="Total activities" value={totalActivities} />
         </div>
-      </CardContent>
+      </div>
     </Card>
   );
 }
@@ -61,7 +61,7 @@ function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="text-center">
       <p className="text-xl font-bold text-foreground">{value}</p>
-      <p className="text-xs text-muted">{label}</p>
+      <p className="whitespace-nowrap text-xs text-muted">{label}</p>
     </div>
   );
 }
