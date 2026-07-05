@@ -23,7 +23,7 @@ export function SiteHeader() {
         </Link>
 
         {loading ? null : user ? (
-          <nav className="flex items-center gap-3">
+          <nav className="flex items-center gap-2 sm:gap-3">
             <Link
               href="/challenges"
               className="text-sm text-muted hover:text-foreground"
@@ -47,7 +47,9 @@ export function SiteHeader() {
                   {(profile?.displayName ?? "?").charAt(0).toUpperCase()}
                 </span>
               )}
-              {profile?.displayName ?? "Profile"}
+              <span className="hidden sm:inline">
+                {profile?.displayName ?? "Profile"}
+              </span>
             </Link>
             <Button variant="ghost" size="sm" onClick={handleSignOut}>
               Sign out

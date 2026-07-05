@@ -38,9 +38,9 @@ export function HubHeader({
         </div>
 
         <div className="grid grid-cols-3 gap-2">
-          <Stat label="Active challenges" value={activeChallengeCount} />
-          <Stat label="Total challenges" value={totalChallengeCount} />
-          <Stat label="Total activities" value={totalActivities} />
+          <Stat label="Active" value={activeChallengeCount} />
+          <Stat label="Challenges" value={totalChallengeCount} />
+          <Stat label="Activities" value={totalActivities} />
         </div>
 
         <div className="border-t border-line pt-4">
@@ -67,7 +67,7 @@ export function HubHeader({
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="text-center">
-      <p className="text-xl font-bold text-foreground">{value}</p>
+      <p className="text-lg font-bold text-foreground sm:text-xl">{value}</p>
       <p className="whitespace-nowrap text-xs text-muted">{label}</p>
     </div>
   );
