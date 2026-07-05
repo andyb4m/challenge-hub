@@ -3,11 +3,26 @@ import {
   buildManualActivity,
   buildNewChallenge,
   buildNewMember,
+  buildStravaGoalActivity,
+  buildStravaZoneActivity,
   buildVarietyActivity,
   buildZoneActivity,
 } from "@/lib/challenges/challenge-doc";
 import { DEFAULT_ZONE_CONFIG } from "@/lib/challenges/zone";
-import type { CreateChallengeInput } from "@/types";
+import type { CreateChallengeInput, StravaActivity } from "@/types";
+
+const stravaActivity: StravaActivity = {
+  id: 999,
+  name: "Morning Run",
+  type: "Run",
+  sport_type: "TrailRun",
+  distance: 10234.5,
+  moving_time: 3000,
+  elapsed_time: 3200,
+  start_date: "2026-07-02T06:00:00Z",
+  map: { summary_polyline: "abc123" },
+  athlete: { id: 42 },
+};
 
 const now = new Date("2026-07-02T10:00:00Z");
 
@@ -197,6 +212,49 @@ describe("buildZoneActivity", () => {
       now
     );
     expect(activity.points).toBe(20);
+  });
+});
+
+describe("buildStravaGoalActivity", () => {
+  it("maps Strava fields, sport type, and rounds distance", () => {
+    const activity = buildStravaGoalActivity(
+      stravaActivity,
+      { id: "ch-goal" },
+      "uid-1",
+      now
+    );
+    expect(activity).toEqual({
+      challengeId: "ch-goal",
+      uid: "uid-1",
+      source: "strava",
+      stravaActivityId: 999,
+      name: "Morning Run",
+      sportType: "Run", // TrailRun maps to Run
+      distance: 10235, // rounded
+      movingTime: 3000,
+      elapsedTime: 3200,
+      startDate: "2026-07-02T06:00:00Z",
+      polyline: "abc123",
+      syncedAt: now.toISOString(),
+    });
+  });
+});
+
+describe("buildStravaZoneActivity", () => {
+  it("uses Strava's real moving time, not summed zone minutes", () => {
+    const activity = buildStravaZoneActivity(
+      stravaActivity,
+      { z2: 40, z3: 0, z4: 0, z5: 0 },
+      { id: "ch-zone", zoneConfig: null },
+      "uid-1",
+      now
+    );
+    expect(activity.source).toBe("strava");
+    expect(activity.stravaActivityId).toBe(999);
+    expect(activity.zoneKind).toBe("zone-training");
+    expect(activity.zones).toEqual({ z2: 40, z3: 0, z4: 0, z5: 0 });
+    expect(activity.movingTime).toBe(3000); // real duration, not 40*60
+    expect(activity.points).toBe(40); // z2 * 1.0 default multiplier
   });
 });
 

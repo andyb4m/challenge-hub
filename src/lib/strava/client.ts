@@ -1,4 +1,5 @@
 import type { StravaActivity } from "@/types";
+import type { StravaZoneDistribution } from "@/lib/strava/zones";
 
 const STRAVA_API_BASE = "https://www.strava.com/api/v3";
 const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
@@ -60,6 +61,28 @@ export async function fetchStravaActivity(
   }
 
   return res.json() as Promise<StravaActivity>;
+}
+
+/**
+ * Time-in-zone distribution for an activity (heart rate and/or power).
+ * 404s when the activity has no zone data at all (no HR monitor used,
+ * or the athlete hasn't configured zones) — treated the same as an
+ * empty distribution rather than an error.
+ */
+export async function fetchActivityZones(
+  accessToken: string,
+  activityId: number
+): Promise<StravaZoneDistribution[]> {
+  const res = await fetch(`${STRAVA_API_BASE}/activities/${activityId}/zones`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  });
+
+  if (!res.ok) {
+    if (res.status === 404) return [];
+    throw new Error(`Strava zones fetch failed: ${res.status}`);
+  }
+
+  return res.json() as Promise<StravaZoneDistribution[]>;
 }
 
 export async function fetchRecentActivities(
