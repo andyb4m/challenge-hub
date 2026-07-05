@@ -125,10 +125,12 @@ export default function DatenschutzPage() {
 
       <Section title="5. Speicherdauer">
         <p>
-          Deine Daten werden gespeichert, solange dein Konto besteht. Eine
-          eigenständige Funktion zur Löschung des Kontos ist derzeit noch in
-          Entwicklung; bis dahin kannst du eine Löschung formlos per E-Mail
-          an die oben genannte Adresse anfragen.
+          Deine Daten werden gespeichert, solange dein Konto besteht. Du
+          kannst dein Konto und alle damit verbundenen Daten (Profil,
+          Challenge-Mitgliedschaften, erfasste Aktivitäten) jederzeit
+          eigenständig über die Profilseite löschen. Alternativ kannst du
+          eine Löschung formlos per E-Mail an die oben genannte Adresse
+          anfragen.
         </p>
       </Section>
 
