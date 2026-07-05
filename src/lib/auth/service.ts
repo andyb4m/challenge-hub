@@ -68,6 +68,22 @@ export async function signOutUser(): Promise<void> {
   await signOut(firebaseAuth());
 }
 
+/**
+ * Permanently deletes the signed-in user's account and all their data
+ * (server-side, via /api/account) then signs them out locally.
+ */
+export async function deleteAccount(authUser: FirebaseUser): Promise<void> {
+  const idToken = await authUser.getIdToken();
+  const res = await fetch("/api/account", {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+  if (!res.ok) {
+    throw new Error("Failed to delete account");
+  }
+  await signOut(firebaseAuth());
+}
+
 export async function updateDisplayName(
   authUser: FirebaseUser,
   displayName: string
