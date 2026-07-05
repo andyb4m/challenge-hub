@@ -86,9 +86,28 @@ export function ActivityFeed({
                 className="flex items-center justify-between gap-3 border-b border-line/60 pb-3 last:border-b-0 last:pb-0"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {activity.name}
-                  </p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {activity.source === "strava" && activity.stravaActivityId ? (
+                        <a
+                          href={`https://www.strava.com/activities/${activity.stravaActivityId}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="hover:underline"
+                          title="View on Strava"
+                        >
+                          {activity.name}
+                        </a>
+                      ) : (
+                        activity.name
+                      )}
+                    </p>
+                    {activity.source === "strava" && (
+                      <span className="shrink-0 rounded-full bg-[#FC4C02]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#FC4C02]">
+                        Strava
+                      </span>
+                    )}
+                  </div>
                   <p className="text-xs text-muted">
                     {nameByUid.get(activity.uid) ?? "Former member"} ·{" "}
                     {activity.startDate.slice(0, 10)} ·{" "}
