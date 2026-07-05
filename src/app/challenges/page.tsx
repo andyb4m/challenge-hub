@@ -21,7 +21,7 @@ function ChallengesContent() {
           activeChallengeCount={overview.activeChallengeCount}
           totalChallengeCount={overview.totalChallengeCount}
           totalActivities={overview.totalActivities}
-          lastActivity={overview.lastActivity}
+          recentActivities={overview.recentActivities}
         />
       )}
 

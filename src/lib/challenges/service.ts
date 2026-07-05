@@ -248,10 +248,13 @@ export async function deleteManualActivity(activity: Activity): Promise<void> {
 }
 
 export interface RecentActivity {
+  id: string;
   challengeId: string;
   challengeName: string;
   name: string;
   startDate: string;
+  source: Activity["source"];
+  stravaActivityId: number | null;
 }
 
 /** Sum of the user's activityCount across all of their challenges. */
@@ -270,16 +273,18 @@ export async function fetchMyActivityCount(
 }
 
 /**
- * The user's most recent activity across all of their challenges. Fetches
- * each challenge's full activity feed (ordered by startDate, same
- * single-field index useActivities already relies on) and filters by uid
- * client-side, rather than a where+orderBy query, which would need a
- * composite index this project doesn't define.
+ * The user's own most recent activities across all of their challenges,
+ * newest first. Fetches each challenge's full activity feed (ordered by
+ * startDate, same single-field index useActivities already relies on)
+ * and filters to this user's entries client-side, rather than a
+ * where(uid==).orderBy(startDate) query, which would need a composite
+ * index this project doesn't define.
  */
-export async function fetchMyLastActivity(
+export async function fetchMyRecentActivities(
   challenges: Pick<Challenge, "id" | "name">[],
-  uid: string
-): Promise<RecentActivity | null> {
+  uid: string,
+  limitCount = 5
+): Promise<RecentActivity[]> {
   const db = firestoreDb();
   const perChallenge = await Promise.all(
     challenges.map(async (challenge) => {
@@ -289,21 +294,25 @@ export async function fetchMyLastActivity(
           orderBy("startDate", "desc")
         )
       );
-      const mineDoc = snapshot.docs.find((d) => (d.data() as Activity).uid === uid);
-      if (!mineDoc) return null;
-      const activity = mineDoc.data() as Activity;
-      return {
-        challengeId: challenge.id,
-        challengeName: challenge.name,
-        name: activity.name,
-        startDate: activity.startDate,
-      };
+      return snapshot.docs
+        .filter((d) => (d.data() as Activity).uid === uid)
+        .map((d) => {
+          const activity = d.data() as Activity;
+          return {
+            id: d.id,
+            challengeId: challenge.id,
+            challengeName: challenge.name,
+            name: activity.name,
+            startDate: activity.startDate,
+            source: activity.source,
+            stravaActivityId: activity.stravaActivityId,
+          };
+        });
     })
   );
 
-  const mine = perChallenge.filter((a): a is RecentActivity => a !== null);
-  if (mine.length === 0) return null;
-  return mine.reduce((latest, current) =>
-    current.startDate > latest.startDate ? current : latest
-  );
+  return perChallenge
+    .flat()
+    .sort((a, b) => (a.startDate < b.startDate ? 1 : -1))
+    .slice(0, limitCount);
 }

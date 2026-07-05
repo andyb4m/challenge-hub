@@ -15,7 +15,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import {
   fetchChallengesByIds,
   fetchMyActivityCount,
-  fetchMyLastActivity,
+  fetchMyRecentActivities,
   type RecentActivity,
 } from "@/lib/challenges/service";
 import { challengeStatus, localToday } from "@/lib/challenges/scoring";
@@ -93,7 +93,7 @@ export interface MyOverview {
   totalActivities: number;
   activeChallengeCount: number;
   totalChallengeCount: number;
-  lastActivity: RecentActivity | null;
+  recentActivities: RecentActivity[];
   isLoading: boolean;
 }
 
@@ -107,19 +107,19 @@ export function useMyOverview(challenges: Challenge[]): MyOverview {
     uid ? ["my-overview", uid, ...challengeIds] : null,
     async () => {
       if (challengeIds.length === 0) {
-        return { totalActivities: 0, lastActivity: null };
+        return { totalActivities: 0, recentActivities: [] };
       }
-      const [totalActivities, lastActivity] = await Promise.all([
+      const [totalActivities, recentActivities] = await Promise.all([
         fetchMyActivityCount(challengeIds, uid!),
-        fetchMyLastActivity(challenges, uid!),
+        fetchMyRecentActivities(challenges, uid!),
       ]);
-      return { totalActivities, lastActivity };
+      return { totalActivities, recentActivities };
     }
   );
 
   return {
     totalActivities: data?.totalActivities ?? 0,
-    lastActivity: data?.lastActivity ?? null,
+    recentActivities: data?.recentActivities ?? [],
     activeChallengeCount: challenges.filter(
       (c) => challengeStatus(c, localToday()) === "active"
     ).length,
