@@ -4,6 +4,7 @@ import Link from "next/link";
 import { RequireAuth } from "@/components/auth/require-auth";
 import { ChallengeCard } from "@/components/challenges/challenge-card";
 import { HubHeader } from "@/components/challenges/hub-header";
+import { RecentActivityCard } from "@/components/challenges/recent-activity-card";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useMyChallenges, useMyOverview } from "@/lib/challenges/hooks";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,6 @@ function ChallengesContent() {
           activeChallengeCount={overview.activeChallengeCount}
           totalChallengeCount={overview.totalChallengeCount}
           totalActivities={overview.totalActivities}
-          recentActivities={overview.recentActivities}
         />
       )}
 
@@ -50,6 +50,9 @@ function ChallengesContent() {
           ))}
         </div>
       )}
+
+      <h2 className="text-2xl font-bold text-foreground">Recent activity</h2>
+      <RecentActivityCard activities={overview.recentActivities} />
     </main>
   );
 }
