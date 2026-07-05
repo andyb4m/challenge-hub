@@ -28,7 +28,8 @@ export async function DELETE(request: Request) {
   let uid: string;
   try {
     ({ uid } = await adminAuth().verifyIdToken(idToken));
-  } catch {
+  } catch (err) {
+    console.error("verifyIdToken failed in DELETE /api/account:", err);
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   }
 
