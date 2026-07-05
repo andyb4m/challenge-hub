@@ -3,6 +3,7 @@ import type {
   Challenge,
   ChallengeMember,
   CreateChallengeInput,
+  StravaActivity,
   User,
 } from "@/types";
 import {
@@ -11,6 +12,8 @@ import {
   zoneActivityPoints,
   type ZoneActivityInput,
 } from "@/lib/challenges/zone";
+import { mapStravaSportType } from "@/lib/strava/sport-type";
+import type { ZoneMinutes } from "@/lib/strava/zones";
 
 /** Everything for a new challenge doc except the Firestore-assigned id. */
 export function buildNewChallenge(
@@ -128,6 +131,63 @@ export function buildZoneActivity(
     syncedAt: now.toISOString(),
     zoneKind: input.kind,
     zones: input.kind === "zone-training" ? input.zones : null,
+    points: zoneActivityPoints(input, config),
+  };
+}
+
+/** A Strava-synced entry in a goal challenge. */
+export function buildStravaGoalActivity(
+  stravaActivity: StravaActivity,
+  challenge: Pick<Challenge, "id">,
+  uid: string,
+  now: Date = new Date()
+): Omit<Activity, "id"> {
+  return {
+    challengeId: challenge.id,
+    uid,
+    source: "strava",
+    stravaActivityId: stravaActivity.id,
+    name: stravaActivity.name,
+    sportType: mapStravaSportType(stravaActivity.sport_type),
+    distance: Math.round(stravaActivity.distance),
+    movingTime: stravaActivity.moving_time,
+    elapsedTime: stravaActivity.elapsed_time,
+    startDate: stravaActivity.start_date,
+    polyline: stravaActivity.map.summary_polyline,
+    syncedAt: now.toISOString(),
+  };
+}
+
+/**
+ * A Strava-synced zone-training entry. Only ever "zone-training" — the
+ * Others/Recovery categories have no Strava equivalent and stay manual.
+ * Duration comes from Strava's real moving_time, not summed zone minutes
+ * (which only cover Z2-Z5 and would undercount time in Z1/warm-up).
+ */
+export function buildStravaZoneActivity(
+  stravaActivity: StravaActivity,
+  zones: ZoneMinutes,
+  challenge: Pick<Challenge, "id" | "zoneConfig">,
+  uid: string,
+  now: Date = new Date()
+): Omit<Activity, "id"> {
+  const config = challenge.zoneConfig ?? DEFAULT_ZONE_CONFIG;
+  const input: ZoneActivityInput = { kind: "zone-training", zones };
+  return {
+    challengeId: challenge.id,
+    uid,
+    source: "strava",
+    stravaActivityId: stravaActivity.id,
+    name: stravaActivity.name,
+    sportType: null,
+    distance: 0,
+    movingTime: stravaActivity.moving_time,
+    elapsedTime: stravaActivity.elapsed_time,
+    startDate: stravaActivity.start_date,
+    polyline: null,
+    syncedAt: now.toISOString(),
+    zoneKind: "zone-training",
+    zones,
     points: zoneActivityPoints(input, config),
   };
 }

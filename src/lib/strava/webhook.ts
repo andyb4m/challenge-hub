@@ -1,25 +1,23 @@
 import crypto from "crypto";
 
 /**
- * Verifies the X-Hub-Signature header sent by Strava on webhook POSTs.
- * Returns true only if the signature is valid.
+ * Verifies Strava's one-time webhook subscription validation handshake.
+ * When a push_subscription is created, Strava sends a GET request to the
+ * callback URL with hub.mode/hub.challenge/hub.verify_token query params;
+ * the callback must echo hub.challenge back, but only if hub.verify_token
+ * matches the token we registered the subscription with. There is no
+ * per-event signature on the POST events themselves (unlike many other
+ * webhook APIs) — see https://developers.strava.com/docs/webhooks/.
  */
-export function verifyStravaWebhookSignature(
-  rawBody: string,
-  signatureHeader: string | null
+export function verifyStravaWebhookChallenge(
+  verifyToken: string | null
 ): boolean {
-  if (!signatureHeader) return false;
+  const expected = process.env.STRAVA_WEBHOOK_VERIFY_TOKEN;
+  if (!expected || !verifyToken) return false;
 
-  const secret = process.env.STRAVA_WEBHOOK_VERIFY_TOKEN;
-  if (!secret) return false;
+  const provided = Buffer.from(verifyToken);
+  const expectedBuffer = Buffer.from(expected);
+  if (provided.length !== expectedBuffer.length) return false;
 
-  const expected = `sha256=${crypto
-    .createHmac("sha256", secret)
-    .update(rawBody)
-    .digest("hex")}`;
-
-  return crypto.timingSafeEqual(
-    Buffer.from(signatureHeader),
-    Buffer.from(expected)
-  );
+  return crypto.timingSafeEqual(provided, expectedBuffer);
 }
