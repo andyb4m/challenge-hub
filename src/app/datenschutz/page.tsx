@@ -1,28 +1,9 @@
 import type { Metadata } from "next";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LegalSection as Section } from "@/components/legal-section";
 
 export const metadata: Metadata = {
   title: "Datenschutzerklärung | Challenge Hub",
 };
-
-function Section({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3 text-sm text-muted">
-        {children}
-      </CardContent>
-    </Card>
-  );
-}
 
 export default function DatenschutzPage() {
   return (
@@ -77,6 +58,16 @@ export default function DatenschutzPage() {
             Trainingszonen bzw. Punkte, je nach Challenge-Format).
           </li>
           <li>
+            <span className="text-foreground">Strava-Daten (optional):</span>{" "}
+            wenn du dein Strava-Konto verbindest, rufen wir über die
+            Strava-API deine Trainingsaktivitäten ab (Name, Sportart, Distanz,
+            Dauer, Startzeit, Streckenverlauf sowie – für Punkte-Challenges –
+            deine Herzfrequenzzonen) und gleichen sie automatisch mit deinen
+            Challenges ab. Du kannst die Verbindung jederzeit über die
+            Profilseite trennen; danach werden keine weiteren Aktivitäten
+            mehr abgerufen.
+          </li>
+          <li>
             <span className="text-foreground">Nutzungsdaten:</span> technische
             Daten, die beim Betrieb der Anwendung anfallen (z. B.
             Anmeldezeitpunkte), soweit sie von Firebase Authentication
@@ -112,6 +103,13 @@ export default function DatenschutzPage() {
           <li>
             <span className="text-foreground">Netlify, Inc.</span> (Hosting der
             Webanwendung).
+          </li>
+          <li>
+            <span className="text-foreground">Strava, Inc.</span> – nur wenn du
+            dein Strava-Konto aktiv verbindest. Der Abruf deiner
+            Trainingsdaten erfolgt auf Grundlage deiner Einwilligung
+            (OAuth-Autorisierung bei Strava) und unterliegt zusätzlich
+            Stravas eigener Datenschutzerklärung.
           </li>
         </ul>
         <p className="rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning">
@@ -160,11 +158,14 @@ export default function DatenschutzPage() {
         </p>
       </Section>
 
-      <Section title="8. Zukünftige Erweiterungen">
+      <Section title="8. Strava-Anbindung">
         <p>
-          Eine optionale Anbindung an Strava zur automatischen Synchronisierung
-          von Trainingsaktivitäten ist in Vorbereitung, aber noch nicht aktiv.
-          Diese Erklärung wird aktualisiert, sobald diese Funktion live geht.
+          Die optionale Strava-Anbindung ist aktiv. Nach dem Verbinden
+          deines Konto ruft die Anwendung neue Aktivitäten automatisch ab
+          (über einen von Strava bereitgestellten Webhook) und gleicht sie
+          mit deinen laufenden Challenges ab. Gelöschte Aktivitäten werden
+          entsprechend auch bei uns entfernt. Du kannst die Verbindung
+          jederzeit selbst über die Profilseite trennen.
         </p>
       </Section>
 

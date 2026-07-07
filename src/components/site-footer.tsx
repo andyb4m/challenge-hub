@@ -10,6 +10,9 @@ export function SiteFooter() {
         <Link href="/datenschutz" className="hover:text-muted">
           Datenschutz
         </Link>
+        <Link href="/terms" className="hover:text-muted">
+          Terms
+        </Link>
       </div>
     </footer>
   );
