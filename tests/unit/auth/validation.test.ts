@@ -3,6 +3,7 @@ import {
   registerSchema,
   loginSchema,
   profileSchema,
+  resetPasswordSchema,
   firstError,
 } from "@/lib/auth/validation";
 
@@ -60,6 +61,19 @@ describe("loginSchema", () => {
 describe("profileSchema", () => {
   it("rejects a display name over 50 characters", () => {
     const result = profileSchema.safeParse({ displayName: "x".repeat(51) });
+    expect(result.success).toBe(false);
+  });
+});
+
+describe("resetPasswordSchema", () => {
+  it("accepts a valid email", () => {
+    expect(resetPasswordSchema.safeParse({ email: "a@b.co" }).success).toBe(
+      true
+    );
+  });
+
+  it("rejects an invalid email", () => {
+    const result = resetPasswordSchema.safeParse({ email: "not-an-email" });
     expect(result.success).toBe(false);
   });
 });

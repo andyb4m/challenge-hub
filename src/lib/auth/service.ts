@@ -2,6 +2,7 @@
 
 import {
   createUserWithEmailAndPassword,
+  sendPasswordResetEmail,
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut,
@@ -66,6 +67,26 @@ export async function signInWithGoogle(): Promise<void> {
 
 export async function signOutUser(): Promise<void> {
   await signOut(firebaseAuth());
+}
+
+/**
+ * Sends a password reset email if the address belongs to an account.
+ * Deliberately swallows "no such account" so the UI shows the same
+ * outcome either way — otherwise this would let anyone probe which
+ * emails are registered.
+ */
+export async function requestPasswordReset(email: string): Promise<void> {
+  try {
+    await sendPasswordResetEmail(firebaseAuth(), email);
+  } catch (err) {
+    const code =
+      typeof err === "object" && err !== null && "code" in err
+        ? String((err as { code: unknown }).code)
+        : "";
+    if (code !== "auth/user-not-found") {
+      throw err;
+    }
+  }
 }
 
 /**

@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebase/admin";
-import { COLLECTIONS } from "@/lib/firebase/collections";
-import type { Challenge } from "@/types";
+import { findChallengeByTokenServer } from "@/lib/challenges/invite-server";
 
 /**
  * Public invite preview lookup. Runs server-side with the Admin SDK so
@@ -13,17 +11,9 @@ export async function GET(
   _request: Request,
   { params }: { params: { token: string } }
 ) {
-  const snapshot = await adminDb()
-    .collection(COLLECTIONS.challenges)
-    .where("inviteToken", "==", params.token)
-    .limit(1)
-    .get();
-
-  if (snapshot.empty) {
+  const challenge = await findChallengeByTokenServer(params.token);
+  if (!challenge) {
     return NextResponse.json({ error: "not-found" }, { status: 404 });
   }
-
-  const doc = snapshot.docs[0];
-  const challenge = { id: doc.id, ...doc.data() } as Challenge;
   return NextResponse.json(challenge);
 }

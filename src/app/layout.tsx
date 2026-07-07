@@ -5,13 +5,31 @@ import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
 import { ServiceWorkerRegister } from "@/components/service-worker-register";
 
+const description =
+  "Compete in fitness challenges with friends, powered by Strava";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
+  ),
   title: "Challenge Hub",
-  description: "Compete in fitness challenges with friends, powered by Strava",
+  description,
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
     title: "Challenge Hub",
+  },
+  openGraph: {
+    title: "Challenge Hub",
+    description,
+    siteName: "Challenge Hub",
+    type: "website",
+    images: ["/icons/icon-512.png"],
+  },
+  twitter: {
+    card: "summary",
+    title: "Challenge Hub",
+    description,
   },
 };
 

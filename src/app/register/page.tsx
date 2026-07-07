@@ -118,6 +118,18 @@ function RegisterForm() {
             </Button>
           </form>
 
+          <p className="text-center text-xs text-faint">
+            By creating an account, you agree to the{" "}
+            <Link href="/terms" className="underline hover:text-muted">
+              Terms of Service
+            </Link>{" "}
+            and{" "}
+            <Link href="/datenschutz" className="underline hover:text-muted">
+              Privacy Policy
+            </Link>
+            .
+          </p>
+
           <div className="flex items-center gap-3">
             <div className="h-px flex-1 bg-line" />
             <span className="text-xs uppercase text-faint">or</span>
