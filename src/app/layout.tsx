@@ -1,12 +1,22 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth/auth-context";
 import { SiteHeader } from "@/components/site-header";
 import { SiteFooter } from "@/components/site-footer";
+import { ServiceWorkerRegister } from "@/components/service-worker-register";
 
 export const metadata: Metadata = {
   title: "Challenge Hub",
   description: "Compete in fitness challenges with friends, powered by Strava",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Challenge Hub",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0f0f23",
 };
 
 export default function RootLayout({
@@ -35,6 +45,7 @@ export default function RootLayout({
       </head>
       <body className="flex min-h-screen flex-col bg-background font-sans text-foreground antialiased">
         <AuthProvider>
+          <ServiceWorkerRegister />
           <SiteHeader />
           <div className="flex-1">{children}</div>
           <SiteFooter />
