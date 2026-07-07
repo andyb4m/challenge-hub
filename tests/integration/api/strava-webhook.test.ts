@@ -176,3 +176,69 @@ describe("POST /api/strava/webhook (events)", () => {
     expect(mockUpdate).not.toHaveBeenCalled();
   });
 });
+
+describe("POST /api/strava/webhook (subscription_id check)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.unstubAllEnvs();
+  });
+
+  it("rejects events with a mismatched subscription_id when STRAVA_SUBSCRIPTION_ID is configured", async () => {
+    vi.stubEnv("STRAVA_SUBSCRIPTION_ID", "999");
+    mockFindUidByAthleteId.mockResolvedValue("uid-1");
+
+    const res = await POST(
+      makePostRequest({
+        object_type: "activity",
+        aspect_type: "create",
+        object_id: 1,
+        owner_id: 42,
+        subscription_id: 12345, // doesn't match
+        event_time: 1234567890,
+        updates: {},
+      })
+    );
+
+    expect(res.status).toBe(403);
+    expect(mockSyncStravaActivity).not.toHaveBeenCalled();
+  });
+
+  it("accepts events with a matching subscription_id when configured", async () => {
+    vi.stubEnv("STRAVA_SUBSCRIPTION_ID", "12345");
+    mockFindUidByAthleteId.mockResolvedValue("uid-1");
+
+    const res = await POST(
+      makePostRequest({
+        object_type: "activity",
+        aspect_type: "create",
+        object_id: 1,
+        owner_id: 42,
+        subscription_id: 12345,
+        event_time: 1234567890,
+        updates: {},
+      })
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockSyncStravaActivity).toHaveBeenCalledWith("uid-1", 1);
+  });
+
+  it("skips the check entirely when STRAVA_SUBSCRIPTION_ID isn't configured", async () => {
+    mockFindUidByAthleteId.mockResolvedValue("uid-1");
+
+    const res = await POST(
+      makePostRequest({
+        object_type: "activity",
+        aspect_type: "create",
+        object_id: 1,
+        owner_id: 42,
+        subscription_id: 999999,
+        event_time: 1234567890,
+        updates: {},
+      })
+    );
+
+    expect(res.status).toBe(200);
+    expect(mockSyncStravaActivity).toHaveBeenCalledWith("uid-1", 1);
+  });
+});

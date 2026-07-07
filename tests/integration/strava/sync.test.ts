@@ -104,25 +104,43 @@ const { fakeDb, fakeStore, mockFetchStravaActivity, mockFetchActivityZones, mock
       };
     }
 
+    function makeOpsCollector() {
+      const ops: Array<() => void> = [];
+      return {
+        ops,
+        delete: (ref: ReturnType<typeof makeDocRef>) => {
+          ops.push(() => store.delete(ref.path));
+        },
+        update: (ref: ReturnType<typeof makeDocRef>, data: Record<string, unknown>) => {
+          ops.push(() => store.set(ref.path, applyUpdates(store.get(ref.path) ?? {}, data)));
+        },
+        set: (ref: ReturnType<typeof makeDocRef>, data: unknown) => {
+          ops.push(() => store.set(ref.path, data));
+        },
+      };
+    }
+
     const db = {
       collection: makeCollectionRef,
       doc: makeDocRef,
       batch: () => {
-        const ops: Array<() => void> = [];
+        const collector = makeOpsCollector();
         return {
-          delete: (ref: ReturnType<typeof makeDocRef>) => {
-            ops.push(() => store.delete(ref.path));
-          },
-          update: (ref: ReturnType<typeof makeDocRef>, data: Record<string, unknown>) => {
-            ops.push(() => store.set(ref.path, applyUpdates(store.get(ref.path) ?? {}, data)));
-          },
-          set: (ref: ReturnType<typeof makeDocRef>, data: unknown) => {
-            ops.push(() => store.set(ref.path, data));
-          },
+          ...collector,
           commit: async () => {
-            ops.forEach((op) => op());
+            collector.ops.forEach((op) => op());
           },
         };
+      },
+      // Not a real transaction (no conflict detection/retry) - sufficient
+      // for testing the sequential reconcile logic itself, just not true
+      // concurrency behavior.
+      runTransaction: async (updateFn: (tx: ReturnType<typeof makeOpsCollector> & { get: (q: any) => Promise<any> }) => Promise<void>) => {
+        const collector = makeOpsCollector();
+        const tx = { ...collector, get: async (queryOrRef: any) => queryOrRef.get() };
+        const result = await updateFn(tx);
+        collector.ops.forEach((op) => op());
+        return result;
       },
     };
 
@@ -291,11 +309,13 @@ describe("Strava activity sync", () => {
     expect(zoneMember.zoneMinutes).toEqual({ z2: 0, z3: 0, z4: 0, z5: 0 });
   });
 
-  it("removeStravaActivity deletes the entries and reverses member totals", async () => {
+  it("removeStravaActivity re-verifies against Strava, then deletes and reverses totals once confirmed gone", async () => {
     mockFetchStravaActivity.mockResolvedValue(baseActivity());
     mockFetchActivityZones.mockResolvedValue(noHeartrateZones);
     await syncStravaActivity(UID, 999);
 
+    // Strava confirms the activity is really gone (404 -> null)
+    mockFetchStravaActivity.mockResolvedValue(null);
     await removeStravaActivity(UID, 999);
 
     const goalMember = fakeStore.get(`challenges/ch-goal/members/${UID}`);
@@ -306,6 +326,40 @@ describe("Strava activity sync", () => {
       k.startsWith(`${COLLECTIONS.activities("ch-goal")}/`)
     );
     expect(activityKeys).toHaveLength(0);
+  });
+
+  it("removeStravaActivity ignores a delete claim when Strava still has the activity (forged/incorrect delete event)", async () => {
+    mockFetchStravaActivity.mockResolvedValue(baseActivity());
+    mockFetchActivityZones.mockResolvedValue(noHeartrateZones);
+    await syncStravaActivity(UID, 999);
+
+    // The webhook claims deletion, but re-fetching Strava shows the
+    // activity still exists - the claim should be ignored.
+    mockFetchStravaActivity.mockResolvedValue(baseActivity());
+    await removeStravaActivity(UID, 999);
+
+    const goalMember = fakeStore.get(`challenges/ch-goal/members/${UID}`);
+    expect(goalMember.totalDistance).toBe(5000);
+    expect(goalMember.activityCount).toBe(1);
+
+    const activityKeys = [...fakeStore.keys()].filter((k) =>
+      k.startsWith(`${COLLECTIONS.activities("ch-goal")}/`)
+    );
+    expect(activityKeys).toHaveLength(1);
+  });
+
+  it("syncStravaActivity cleans up a stale entry when Strava confirms the activity no longer exists", async () => {
+    mockFetchStravaActivity.mockResolvedValue(baseActivity());
+    mockFetchActivityZones.mockResolvedValue(noHeartrateZones);
+    await syncStravaActivity(UID, 999);
+
+    // A create/update event arrives late, after the activity was deleted
+    mockFetchStravaActivity.mockResolvedValue(null);
+    await syncStravaActivity(UID, 999);
+
+    const goalMember = fakeStore.get(`challenges/ch-goal/members/${UID}`);
+    expect(goalMember.totalDistance).toBe(0);
+    expect(goalMember.activityCount).toBe(0);
   });
 
   it("findUidByAthleteId resolves a connected athlete id to its uid", async () => {
