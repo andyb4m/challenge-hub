@@ -6,17 +6,14 @@ import { RequireAuth } from "@/components/auth/require-auth";
 import { ProfileForm } from "@/components/profile/profile-form";
 import { StravaCard } from "@/components/profile/strava-card";
 import { DeleteAccountCard } from "@/components/profile/delete-account-card";
+import { ProfileSkeleton } from "@/components/profile/profile-skeleton";
 
 function ProfileContent() {
   const { user, profile } = useAuth();
 
   // RequireAuth guarantees user; profile may lag one render behind
   if (!user || !profile) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <p className="text-sm text-muted">Loading profile…</p>
-      </div>
-    );
+    return <ProfileSkeleton />;
   }
 
   return (

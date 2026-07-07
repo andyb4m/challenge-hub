@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { RequireAuth } from "@/components/auth/require-auth";
 import { ChallengeCard } from "@/components/challenges/challenge-card";
+import { ChallengeListSkeleton } from "@/components/challenges/challenge-list-skeleton";
 import { HubHeader } from "@/components/challenges/hub-header";
 import { RecentActivityCard } from "@/components/challenges/recent-activity-card";
 import { useAuth } from "@/lib/auth/auth-context";
@@ -33,7 +34,7 @@ function ChallengesContent() {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-muted">Loading challenges…</p>
+        <ChallengeListSkeleton />
       ) : challenges.length === 0 ? (
         <div className="rounded-lg border border-dashed border-line p-8 text-center">
           <p className="text-muted">

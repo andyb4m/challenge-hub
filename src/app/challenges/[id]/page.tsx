@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { RequireAuth } from "@/components/auth/require-auth";
+import { ChallengeDetailSkeleton } from "@/components/challenges/challenge-detail-skeleton";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   useActivities,
@@ -33,11 +34,7 @@ function ChallengeDetail({ challengeId }: { challengeId: string }) {
   const activities = useActivities(challengeId);
 
   if (loading || !user) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center">
-        <p className="text-sm text-muted">Loading challenge…</p>
-      </div>
-    );
+    return <ChallengeDetailSkeleton />;
   }
 
   if (!challenge) {
