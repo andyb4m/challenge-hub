@@ -48,15 +48,23 @@ export async function getValidToken(tokens: TokenSet): Promise<TokenSet> {
   return refreshStravaToken(tokens.refreshToken);
 }
 
+/**
+ * Fetches the canonical activity from Strava. Returns null on a 404 (the
+ * activity doesn't exist / was deleted) so callers can distinguish
+ * "confirmed gone" from a transient error — important for webhook delete
+ * events, which have no signature and must be re-verified against the
+ * API rather than trusted at face value.
+ */
 export async function fetchStravaActivity(
   accessToken: string,
   activityId: number
-): Promise<StravaActivity> {
+): Promise<StravaActivity | null> {
   const res = await fetch(`${STRAVA_API_BASE}/activities/${activityId}`, {
     headers: { Authorization: `Bearer ${accessToken}` },
   });
 
   if (!res.ok) {
+    if (res.status === 404) return null;
     throw new Error(`Strava activity fetch failed: ${res.status}`);
   }
 

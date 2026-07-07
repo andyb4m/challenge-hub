@@ -82,20 +82,31 @@ async function fetchUserChallenges(
     .map((snap) => ({ id: snap.id, ...snap.data() }) as Challenge);
 }
 
-/** Existing Strava-synced activity doc(s) for this activity in a challenge. */
-async function findExisting(db: Firestore, challengeId: string, uid: string, stravaActivityId: number) {
+/** Query for existing Strava-synced activity doc(s) for this activity in a challenge. */
+function existingActivityQuery(
+  db: Firestore,
+  challengeId: string,
+  uid: string,
+  stravaActivityId: number
+) {
   return db
     .collection(COLLECTIONS.activities(challengeId))
     .where("stravaActivityId", "==", stravaActivityId)
-    .where("uid", "==", uid)
-    .get();
+    .where("uid", "==", uid);
 }
 
 /**
  * Reconciles a goal-challenge activity doc against the decided state:
  * removes any existing entry for this Strava activity (reversing its
  * contribution to member totals) and, if `decided` is non-null, creates
- * the fresh entry and applies its contribution — all in one batch.
+ * the fresh entry and applies its contribution.
+ *
+ * Runs as a Firestore transaction, not a plain batch: the read (is there
+ * already an entry for this activity?) and the write must be atomic, or
+ * two concurrent syncs for the same activity (e.g. two near-simultaneous
+ * webhook deliveries) can both see "no existing entry" and both create
+ * one, double-counting the activity's score. Firestore automatically
+ * retries the whole transaction if the read data changes before commit.
  */
 async function reconcileGoalActivity(
   db: Firestore,
@@ -105,41 +116,44 @@ async function reconcileGoalActivity(
   decided: Omit<Activity, "id"> | null
 ): Promise<void> {
   const activitiesRef = db.collection(COLLECTIONS.activities(challengeId));
-  const existing = await findExisting(db, challengeId, uid, stravaActivityId);
-  if (existing.empty && !decided) return;
+  const memberRef = db.doc(`${COLLECTIONS.members(challengeId)}/${uid}`);
 
-  let distanceDelta = 0;
-  let durationDelta = 0;
-  let countDelta = 0;
+  await db.runTransaction(async (tx) => {
+    const existing = await tx.get(
+      existingActivityQuery(db, challengeId, uid, stravaActivityId)
+    );
+    if (existing.empty && !decided) return;
 
-  const batch = db.batch();
-  existing.docs.forEach((doc) => {
-    const activity = doc.data() as Activity;
-    batch.delete(doc.ref);
-    distanceDelta -= activity.distance;
-    durationDelta -= activity.movingTime;
-    countDelta -= 1;
-  });
+    let distanceDelta = 0;
+    let durationDelta = 0;
+    let countDelta = 0;
 
-  if (decided) {
-    batch.set(activitiesRef.doc(), decided);
-    distanceDelta += decided.distance;
-    durationDelta += decided.movingTime;
-    countDelta += 1;
-  }
-
-  if (distanceDelta !== 0 || durationDelta !== 0 || countDelta !== 0) {
-    batch.update(db.doc(`${COLLECTIONS.members(challengeId)}/${uid}`), {
-      totalDistance: FieldValue.increment(distanceDelta),
-      totalDuration: FieldValue.increment(durationDelta),
-      activityCount: FieldValue.increment(countDelta),
+    existing.docs.forEach((doc) => {
+      const activity = doc.data() as Activity;
+      tx.delete(doc.ref);
+      distanceDelta -= activity.distance;
+      durationDelta -= activity.movingTime;
+      countDelta -= 1;
     });
-  }
 
-  await batch.commit();
+    if (decided) {
+      tx.set(activitiesRef.doc(), decided);
+      distanceDelta += decided.distance;
+      durationDelta += decided.movingTime;
+      countDelta += 1;
+    }
+
+    if (distanceDelta !== 0 || durationDelta !== 0 || countDelta !== 0) {
+      tx.update(memberRef, {
+        totalDistance: FieldValue.increment(distanceDelta),
+        totalDuration: FieldValue.increment(durationDelta),
+        activityCount: FieldValue.increment(countDelta),
+      });
+    }
+  });
 }
 
-/** Same idea as reconcileGoalActivity, but for zone-training entries. */
+/** Same idea as reconcileGoalActivity (including the transaction), but for zone-training entries. */
 async function reconcileZoneActivity(
   db: Firestore,
   challengeId: string,
@@ -148,61 +162,80 @@ async function reconcileZoneActivity(
   decided: Omit<Activity, "id"> | null
 ): Promise<void> {
   const activitiesRef = db.collection(COLLECTIONS.activities(challengeId));
-  const existing = await findExisting(db, challengeId, uid, stravaActivityId);
-  if (existing.empty && !decided) return;
+  const memberRef = db.doc(`${COLLECTIONS.members(challengeId)}/${uid}`);
 
-  let durationDelta = 0;
-  let countDelta = 0;
-  let pointsDelta = 0;
-  const zoneDelta = { z2: 0, z3: 0, z4: 0, z5: 0 };
+  await db.runTransaction(async (tx) => {
+    const existing = await tx.get(
+      existingActivityQuery(db, challengeId, uid, stravaActivityId)
+    );
+    if (existing.empty && !decided) return;
 
-  const batch = db.batch();
-  existing.docs.forEach((doc) => {
-    const activity = doc.data() as Activity;
-    const zones = activity.zones ?? { z2: 0, z3: 0, z4: 0, z5: 0 };
-    batch.delete(doc.ref);
-    durationDelta -= activity.movingTime;
-    countDelta -= 1;
-    pointsDelta -= activity.points ?? 0;
-    zoneDelta.z2 -= zones.z2;
-    zoneDelta.z3 -= zones.z3;
-    zoneDelta.z4 -= zones.z4;
-    zoneDelta.z5 -= zones.z5;
-  });
+    let durationDelta = 0;
+    let countDelta = 0;
+    let pointsDelta = 0;
+    const zoneDelta = { z2: 0, z3: 0, z4: 0, z5: 0 };
 
-  if (decided) {
-    const zones = decided.zones ?? { z2: 0, z3: 0, z4: 0, z5: 0 };
-    batch.set(activitiesRef.doc(), decided);
-    durationDelta += decided.movingTime;
-    countDelta += 1;
-    pointsDelta += decided.points ?? 0;
-    zoneDelta.z2 += zones.z2;
-    zoneDelta.z3 += zones.z3;
-    zoneDelta.z4 += zones.z4;
-    zoneDelta.z5 += zones.z5;
-  }
-
-  if (
-    durationDelta !== 0 ||
-    countDelta !== 0 ||
-    pointsDelta !== 0 ||
-    zoneDelta.z2 !== 0 ||
-    zoneDelta.z3 !== 0 ||
-    zoneDelta.z4 !== 0 ||
-    zoneDelta.z5 !== 0
-  ) {
-    batch.update(db.doc(`${COLLECTIONS.members(challengeId)}/${uid}`), {
-      totalDuration: FieldValue.increment(durationDelta),
-      activityCount: FieldValue.increment(countDelta),
-      totalPoints: FieldValue.increment(pointsDelta),
-      "zoneMinutes.z2": FieldValue.increment(zoneDelta.z2),
-      "zoneMinutes.z3": FieldValue.increment(zoneDelta.z3),
-      "zoneMinutes.z4": FieldValue.increment(zoneDelta.z4),
-      "zoneMinutes.z5": FieldValue.increment(zoneDelta.z5),
+    existing.docs.forEach((doc) => {
+      const activity = doc.data() as Activity;
+      const zones = activity.zones ?? { z2: 0, z3: 0, z4: 0, z5: 0 };
+      tx.delete(doc.ref);
+      durationDelta -= activity.movingTime;
+      countDelta -= 1;
+      pointsDelta -= activity.points ?? 0;
+      zoneDelta.z2 -= zones.z2;
+      zoneDelta.z3 -= zones.z3;
+      zoneDelta.z4 -= zones.z4;
+      zoneDelta.z5 -= zones.z5;
     });
-  }
 
-  await batch.commit();
+    if (decided) {
+      const zones = decided.zones ?? { z2: 0, z3: 0, z4: 0, z5: 0 };
+      tx.set(activitiesRef.doc(), decided);
+      durationDelta += decided.movingTime;
+      countDelta += 1;
+      pointsDelta += decided.points ?? 0;
+      zoneDelta.z2 += zones.z2;
+      zoneDelta.z3 += zones.z3;
+      zoneDelta.z4 += zones.z4;
+      zoneDelta.z5 += zones.z5;
+    }
+
+    if (
+      durationDelta !== 0 ||
+      countDelta !== 0 ||
+      pointsDelta !== 0 ||
+      zoneDelta.z2 !== 0 ||
+      zoneDelta.z3 !== 0 ||
+      zoneDelta.z4 !== 0 ||
+      zoneDelta.z5 !== 0
+    ) {
+      tx.update(memberRef, {
+        totalDuration: FieldValue.increment(durationDelta),
+        activityCount: FieldValue.increment(countDelta),
+        totalPoints: FieldValue.increment(pointsDelta),
+        "zoneMinutes.z2": FieldValue.increment(zoneDelta.z2),
+        "zoneMinutes.z3": FieldValue.increment(zoneDelta.z3),
+        "zoneMinutes.z4": FieldValue.increment(zoneDelta.z4),
+        "zoneMinutes.z5": FieldValue.increment(zoneDelta.z5),
+      });
+    }
+  });
+}
+
+/** Reconciles decided=null (removal) across every goal/zone challenge in the list. */
+async function removeFromAllChallenges(
+  db: Firestore,
+  challenges: Challenge[],
+  uid: string,
+  stravaActivityId: number
+): Promise<void> {
+  for (const challenge of challenges) {
+    if (challengeScoring(challenge) === "goal") {
+      await reconcileGoalActivity(db, challenge.id, uid, stravaActivityId, null);
+    } else if (challengeScoring(challenge) === "zone") {
+      await reconcileZoneActivity(db, challenge.id, uid, stravaActivityId, null);
+    }
+  }
 }
 
 async function refreshAndPersistTokens(
@@ -261,10 +294,19 @@ export async function syncStravaActivity(
 
   const tokens = await refreshAndPersistTokens(db, uid, user.strava);
   const activity = await fetchStravaActivity(tokens.accessToken, stravaActivityId);
-  if (activity.athlete.id !== user.strava.athleteId) return; // defensive
 
   const challenges = await fetchUserChallenges(db, user.challengeIds ?? []);
   if (challenges.length === 0) return;
+
+  // Strava confirms this activity no longer exists (e.g. a create/update
+  // event arrived for something already deleted) - clean up any stale
+  // entries instead of leaving them stuck.
+  if (!activity) {
+    await removeFromAllChallenges(db, challenges, uid, stravaActivityId);
+    return;
+  }
+
+  if (activity.athlete.id !== user.strava.athleteId) return; // defensive
 
   const needsZones = challenges.some((c) => challengeScoring(c) === "zone");
   const zones = needsZones
@@ -284,7 +326,16 @@ export async function syncStravaActivity(
   }
 }
 
-/** Removes a deleted Strava activity from every challenge that had it. */
+/**
+ * Removes a deleted Strava activity from every challenge that had it.
+ *
+ * Strava's webhook delete events carry no signature, so the claim isn't
+ * trusted at face value: this re-fetches the activity from Strava first
+ * and only proceeds if it's genuinely gone (404). Without this check, a
+ * forged delete event for any known stravaActivityId (visible to fellow
+ * challenge members via the activity feed's Strava link) could silently
+ * strip a real, still-existing activity from someone else's totals.
+ */
 export async function removeStravaActivity(
   uid: string,
   stravaActivityId: number
@@ -292,18 +343,15 @@ export async function removeStravaActivity(
   const db = adminDb();
   const userSnap = await db.collection(COLLECTIONS.users).doc(uid).get();
   if (!userSnap.exists) return;
-  const challenges = await fetchUserChallenges(
-    db,
-    (userSnap.data() as User).challengeIds ?? []
-  );
+  const user = userSnap.data() as User;
+  if (!user.strava) return;
 
-  for (const challenge of challenges) {
-    if (challengeScoring(challenge) === "goal") {
-      await reconcileGoalActivity(db, challenge.id, uid, stravaActivityId, null);
-    } else if (challengeScoring(challenge) === "zone") {
-      await reconcileZoneActivity(db, challenge.id, uid, stravaActivityId, null);
-    }
-  }
+  const tokens = await refreshAndPersistTokens(db, uid, user.strava);
+  const stillExists = await fetchStravaActivity(tokens.accessToken, stravaActivityId);
+  if (stillExists) return; // forged or incorrect delete claim - ignore it
+
+  const challenges = await fetchUserChallenges(db, user.challengeIds ?? []);
+  await removeFromAllChallenges(db, challenges, uid, stravaActivityId);
 }
 
 /**
