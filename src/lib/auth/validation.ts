@@ -27,6 +27,10 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Enter your password"),
 });
 
+export const resetPasswordSchema = z.object({
+  email: emailSchema,
+});
+
 export const profileSchema = z.object({
   displayName: displayNameSchema,
 });
