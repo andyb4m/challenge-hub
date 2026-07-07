@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth/auth-context";
 import { signOutUser } from "@/lib/auth/service";
 import { Button } from "@/components/ui/button";
+import { AccountMenu } from "@/components/account-menu";
 
 export function SiteHeader() {
   const { user, profile, loading } = useAuth();
@@ -23,38 +24,11 @@ export function SiteHeader() {
         </Link>
 
         {loading ? null : user ? (
-          <nav className="flex items-center gap-2 sm:gap-3">
-            <Link
-              href="/challenges"
-              className="text-sm text-muted hover:text-foreground"
-            >
-              Challenges
-            </Link>
-            <Link
-              href="/profile"
-              className="flex items-center gap-2 text-sm text-muted hover:text-foreground"
-            >
-              {profile?.photoURL ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={profile.photoURL}
-                  alt=""
-                  referrerPolicy="no-referrer"
-                  className="h-7 w-7 rounded-full object-cover"
-                />
-              ) : (
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-line text-xs font-medium text-muted">
-                  {(profile?.displayName ?? "?").charAt(0).toUpperCase()}
-                </span>
-              )}
-              <span className="hidden sm:inline">
-                {profile?.displayName ?? "Profile"}
-              </span>
-            </Link>
-            <Button variant="ghost" size="sm" onClick={handleSignOut}>
-              Sign out
-            </Button>
-          </nav>
+          <AccountMenu
+            displayName={profile?.displayName ?? "Profile"}
+            photoURL={profile?.photoURL ?? null}
+            onSignOut={handleSignOut}
+          />
         ) : (
           <nav className="flex items-center gap-2">
             <Link href="/login">
