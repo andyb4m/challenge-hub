@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { RequireAuth } from "@/components/auth/require-auth";
+import { JoinCardSkeleton } from "@/components/challenges/join-card-skeleton";
 import { useAuth } from "@/lib/auth/auth-context";
 import { findChallengeByToken, joinChallenge } from "@/lib/challenges/service";
 import {
@@ -43,7 +44,7 @@ function JoinContent({ token }: { token: string }) {
   }
 
   if (!challenge || !profile) {
-    return <p className="text-center text-sm text-muted">Loading…</p>;
+    return <JoinCardSkeleton />;
   }
 
   const eligibility: JoinEligibility = checkJoinEligibility(
