@@ -24,11 +24,15 @@ export function SiteHeader() {
         </Link>
 
         {loading ? null : user ? (
-          <AccountMenu
-            displayName={profile?.displayName ?? "Profile"}
-            photoURL={profile?.photoURL ?? null}
-            onSignOut={handleSignOut}
-          />
+          // Bottom nav owns Challenges/Profile on mobile; this menu (with
+          // Sign out, which has no bottom-nav slot) stays for desktop only.
+          <div className="hidden sm:block">
+            <AccountMenu
+              displayName={profile?.displayName ?? "Profile"}
+              photoURL={profile?.photoURL ?? null}
+              onSignOut={handleSignOut}
+            />
+          </div>
         ) : (
           <nav className="flex items-center gap-2">
             <Link href="/login">

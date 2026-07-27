@@ -29,7 +29,9 @@ function ChallengesContent() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Your challenges</h1>
         <Link href="/challenges/new">
-          <Button>New challenge</Button>
+          <Button size="icon" className="rounded-full" aria-label="New challenge">
+            <PlusIcon className="h-5 w-5" />
+          </Button>
         </Link>
       </div>
 
@@ -68,5 +70,22 @@ export default function ChallengesPage() {
     <RequireAuth>
       <ChallengesContent />
     </RequireAuth>
+  );
+}
+
+function PlusIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M12 5v14M5 12h14" />
+    </svg>
   );
 }

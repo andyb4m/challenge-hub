@@ -1,18 +1,10 @@
-import Link from "next/link";
+import { LegalLinks } from "@/components/legal-links";
 
 export function SiteFooter() {
   return (
     <footer className="border-t border-line">
-      <div className="mx-auto flex max-w-4xl flex-wrap items-center justify-center gap-x-4 gap-y-1 px-4 py-4 text-xs text-faint">
-        <Link href="/impressum" className="hover:text-muted">
-          Impressum
-        </Link>
-        <Link href="/datenschutz" className="hover:text-muted">
-          Datenschutz
-        </Link>
-        <Link href="/terms" className="hover:text-muted">
-          Terms
-        </Link>
+      <div className="mx-auto max-w-4xl px-4 py-4">
+        <LegalLinks className="justify-center" />
       </div>
     </footer>
   );
