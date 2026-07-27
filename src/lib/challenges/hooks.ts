@@ -127,3 +127,20 @@ export function useMyOverview(challenges: Challenge[]): MyOverview {
     isLoading,
   };
 }
+
+/** The signed-in user's activity across all their challenges, most recent first. */
+export function useMyActivities(challenges: Challenge[], limitCount = 50) {
+  const { profile } = useAuth();
+  const uid = profile?.uid;
+  const challengeIds = challenges.map((c) => c.id);
+
+  const { data, isLoading } = useSWR(
+    uid ? ["my-activities", uid, limitCount, ...challengeIds] : null,
+    () =>
+      challengeIds.length === 0
+        ? Promise.resolve([])
+        : fetchMyRecentActivities(challenges, uid!, limitCount)
+  );
+
+  return { activities: data ?? [], isLoading };
+}

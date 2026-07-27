@@ -52,7 +52,12 @@ function ChallengesContent() {
         </div>
       )}
 
-      <h2 className="text-2xl font-bold text-foreground">Recent activity</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-foreground">Recent activity</h2>
+        <Link href="/activity" className="text-sm text-muted hover:text-foreground">
+          See all
+        </Link>
+      </div>
       <RecentActivityCard activities={overview.recentActivities} />
     </main>
   );
