@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { signOutUser } from "@/lib/auth/service";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export function SignOutButton() {
   const router = useRouter();
@@ -15,9 +15,12 @@ export function SignOutButton() {
 
   return (
     <Card>
-      <CardContent className="flex items-center justify-between p-6">
+      <CardHeader>
+        <CardTitle>Account</CardTitle>
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
         <p className="text-sm text-muted">Signed in on this device.</p>
-        <Button variant="outline" onClick={handleSignOut}>
+        <Button variant="outline" onClick={handleSignOut} className="self-start">
           Sign out
         </Button>
       </CardContent>
