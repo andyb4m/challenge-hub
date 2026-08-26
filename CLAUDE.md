@@ -82,7 +82,9 @@ Two real vulnerabilities were found and fixed in the Strava webhook surface (`sr
 
 OAuth `state` param is HMAC-signed with `STRAVA_CLIENT_SECRET` (`signState`/`verifyState` in `src/lib/strava/oauth.ts`) — an earlier unsigned version would have let anyone who knew a member's uid link their own Strava account to that uid.
 
-If you touch this surface again, re-run a security review (candidate-finding pass → independent per-finding verification pass) rather than assuming it's still sound — this is the app's highest-consequence code path (cross-user data writes from unauthenticated input).
+If you touch this surface again, re-run a security review (candidate-finding pass → independent per-finding verification pass) rather than assuming it's still sound — this is the app's highest-consequence code path (cross-user data writes from unauthenticated input). Concretely: map where untrusted data crosses in (webhook body, OAuth params, form input, third-party API responses) and run a quick STRIDE pass over each boundary (spoofing/tampering/repudiation/disclosure/DoS/privilege-escalation) rather than reasoning about it ad hoc — this is what actually caught the two vulnerabilities above.
+
+**Ask before merging, don't just push:** a new auth flow, a new external integration, a new category of stored personal data, or a `firestore.rules` change. Any new personal-data field needs a stated purpose and, like account deletion already has, a real deletion path — not just a nice-to-have added later.
 
 ---
 
@@ -94,6 +96,7 @@ If you touch this surface again, re-run a security review (candidate-finding pas
 - [x] ~~Strava's "Authorization Callback Domain" doesn't match the live domain~~ — **fixed** (Andreas updated `strava.com/settings/api` → `fit-challenge-hub.netlify.app`, bare domain). Root-caused via a real friend's failed connect attempt (`{"errors":[{"field":"redirect_uri","code":"invalid"}]}`); had been invisible because Strava always whitelists `localhost`, which is where all prior testing happened. Revisit again if/when a custom domain replaces the Netlify one. Same dashboard's "Website" field still shows the old `runningchallenge.netlify.app` placeholder — cosmetic only, not load-bearing for OAuth, low-priority cleanup whenever convenient.
 - [ ] One Datenschutz placeholder: Firestore server region/location (Firebase console → Firestore → location) — needs a console lookup to fill in the EU-transfer clause language. Flagged inline on the page itself.
 - [ ] Firestore rules file and the console's published rules can drift — the repo file is source of truth but **publishing is manual**; if behavior doesn't match the repo, check the console copy first.
+- [ ] **No formal accessibility audit yet** (color contrast, screen readers, WCAG 2.1 AA) — came up during a redesign conversation but hasn't been started. Don't wait for the audit to do the basics on anything new: native semantic elements over `div`+`onClick`, visible focus states, `aria-label` on icon-only controls (already the convention — see `AccountMenu`, the icon-only "New challenge" button), and keyboard operability (Enter to activate, Escape to close). Retrofitting this later is much more expensive than building it in.
 
 ---
 
@@ -108,6 +111,8 @@ Developer is on Windows, VS Code, Node.js v22. Dev server: `npm run dev` → `ht
 ## Workflow conventions for this repo
 
 - Verify before every commit: `npx tsc --noEmit`, `npx next lint`, `npx vitest run`, then `rm -rf .next && npx next build && rm -rf .next`.
-- One PR per feature/fix. Merge routine/cosmetic PRs promptly; hold for explicit confirmation on anything security- or data-sensitive.
+- One PR per feature/fix. Merge routine/cosmetic PRs promptly; hold for explicit confirmation on anything security- or data-sensitive (see the "ask before merging" list under Security notes).
+- Before pushing, self-review the diff on five axes — correctness, readability, architecture, security, performance — not just "it builds and tests pass." Treat ~300 changed lines as the point to consider splitting into more than one PR; a few hundred is fine for one cohesive feature, but don't let unrelated changes ride along.
+- When something breaks unexpectedly, stop and root-cause it before moving on to the next thing: reproduce it reliably, localize where it actually happens rather than guessing, fix the root cause, then leave a guard so it can't silently regress (a test, or a CLAUDE.md note like the Strava callback-domain entry above). Resist patching the symptom and moving on — that's how the callback-domain bug went unnoticed for as long as it did.
 - After a PR merges, reset the working branch from `main` before starting new work (`git fetch origin main && git checkout -B <branch> origin/main`) rather than layering onto already-merged history.
 - Update *this file* in place — condense, don't accumulate. If you're about to add a "Done in session N" block, add the durable fact to the relevant section above instead and let `git log`/the PR carry the narrative.
