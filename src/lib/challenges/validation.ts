@@ -56,6 +56,48 @@ export const varietyConfigSchema = z.object({
     ),
 });
 
+const multiplierField = z
+  .number({ invalid_type_error: "Enter a multiplier" })
+  .min(0, "Can't be negative")
+  .max(5, "5× is already a lot");
+
+const pointsField = z
+  .number({ invalid_type_error: "Enter points" })
+  .min(0, "Can't be negative")
+  .max(500, "That's a lot of points");
+
+const bonusShareField = z
+  .number({ invalid_type_error: "Enter a percentage" })
+  .min(0, "Must be between 0% and 100%")
+  .max(1, "Must be between 0% and 100%");
+
+export const zoneConfigSchema = z.object({
+  multipliers: z.object({
+    z2: multiplierField,
+    z3: multiplierField,
+    z4: multiplierField,
+    z5: multiplierField,
+  }),
+  othersPoints: z.object({
+    thirtyMin: pointsField,
+    sixtyMin: pointsField,
+  }),
+  recoveryPoints: pointsField,
+  bonus: z
+    .object({
+      low: bonusShareField,
+      high: bonusShareField,
+      multiplier: z
+        .number({ invalid_type_error: "Enter a multiplier" })
+        .min(1, "The bonus multiplier must be at least 1×")
+        .max(3, "3× is already huge"),
+    })
+    .refine((b) => b.low < b.high, {
+      message: "Low % must be less than high %",
+      path: ["high"],
+    }),
+});
+
 export const createChallengeSchema = z
   .object({
     name: z
@@ -80,6 +122,7 @@ export const createChallengeSchema = z
       })
       .nullable(),
     varietyConfig: varietyConfigSchema.nullable(),
+    zoneConfig: zoneConfigSchema.nullable(),
     startDate: dateString,
     endDate: dateString,
   })
@@ -94,6 +137,10 @@ export const createChallengeSchema = z
   .refine((c) => c.scoring !== "variety" || c.varietyConfig !== null, {
     message: "Variety challenges need an activity list",
     path: ["varietyConfig"],
+  })
+  .refine((c) => c.scoring !== "zone" || c.zoneConfig !== null, {
+    message: "Zone challenges need scoring rules",
+    path: ["zoneConfig"],
   });
 
 export const manualActivitySchema = z.object({

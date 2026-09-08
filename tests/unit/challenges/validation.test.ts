@@ -5,7 +5,9 @@ import {
   manualActivitySchema,
   varietyActivitySchema,
   zoneActivitySchema,
+  zoneConfigSchema,
 } from "@/lib/challenges/validation";
+import { DEFAULT_ZONE_CONFIG } from "@/lib/challenges/zone";
 
 describe("createChallengeSchema", () => {
   const valid = {
@@ -15,6 +17,7 @@ describe("createChallengeSchema", () => {
     sportType: "Run",
     goal: { value: 100, unit: "distance_km" },
     varietyConfig: null,
+    zoneConfig: null,
     startDate: "2026-07-01",
     endDate: "2026-07-31",
   };
@@ -73,8 +76,20 @@ describe("createChallengeSchema", () => {
       scoring: "zone",
       sportType: null,
       goal: null,
+      zoneConfig: DEFAULT_ZONE_CONFIG,
     });
     expect(result.success).toBe(true);
+  });
+
+  it("rejects a zone challenge without scoring rules", () => {
+    const result = createChallengeSchema.safeParse({
+      ...valid,
+      scoring: "zone",
+      sportType: null,
+      goal: null,
+      zoneConfig: null,
+    });
+    expect(result.success).toBe(false);
   });
 
   it("accepts a variety challenge with a kind list", () => {
@@ -148,6 +163,36 @@ describe("createChallengeSchema", () => {
     expect(
       createChallengeSchema.safeParse({ ...valid, goal: null }).success
     ).toBe(false);
+  });
+});
+
+describe("zoneConfigSchema", () => {
+  it("accepts the default zone config", () => {
+    expect(zoneConfigSchema.safeParse(DEFAULT_ZONE_CONFIG).success).toBe(true);
+  });
+
+  it("rejects a negative multiplier", () => {
+    const result = zoneConfigSchema.safeParse({
+      ...DEFAULT_ZONE_CONFIG,
+      multipliers: { ...DEFAULT_ZONE_CONFIG.multipliers, z2: -1 },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a bonus band where low is not less than high", () => {
+    const result = zoneConfigSchema.safeParse({
+      ...DEFAULT_ZONE_CONFIG,
+      bonus: { low: 0.8, high: 0.7, multiplier: 1.15 },
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects a bonus multiplier below 1", () => {
+    const result = zoneConfigSchema.safeParse({
+      ...DEFAULT_ZONE_CONFIG,
+      bonus: { ...DEFAULT_ZONE_CONFIG.bonus, multiplier: 0.9 },
+    });
+    expect(result.success).toBe(false);
   });
 });
 

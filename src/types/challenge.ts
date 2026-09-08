@@ -113,6 +113,8 @@ export interface CreateChallengeInput {
   goal: ChallengeGoal | null;
   /** required when scoring === "variety" */
   varietyConfig: { kinds: VarietyKindConfig[] } | null;
+  /** required when scoring === "zone" */
+  zoneConfig: ZoneConfig | null;
   startDate: string;
   endDate: string;
 }

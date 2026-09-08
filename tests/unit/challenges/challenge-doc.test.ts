@@ -33,6 +33,7 @@ const goalInput: CreateChallengeInput = {
   sportType: "Run",
   goal: { value: 100, unit: "distance_km" },
   varietyConfig: null,
+  zoneConfig: null,
   startDate: "2026-07-01",
   endDate: "2026-07-31",
 };
@@ -57,14 +58,18 @@ describe("buildNewChallenge", () => {
     });
   });
 
-  it("freezes the zone config onto zone challenges and clears sport/goal", () => {
+  it("freezes the given zone config onto zone challenges and clears sport/goal", () => {
+    const customConfig = {
+      ...DEFAULT_ZONE_CONFIG,
+      recoveryPoints: 50,
+    };
     const challenge = buildNewChallenge(
-      { ...goalInput, scoring: "zone" },
+      { ...goalInput, scoring: "zone", zoneConfig: customConfig },
       "uid-1",
       "t",
       now
     );
-    expect(challenge.zoneConfig).toEqual(DEFAULT_ZONE_CONFIG);
+    expect(challenge.zoneConfig).toEqual(customConfig);
     expect(challenge.sportType).toBeNull();
     expect(challenge.goal).toBeNull();
   });
