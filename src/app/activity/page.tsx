@@ -18,7 +18,7 @@ function ActivityContent() {
       {loading ? (
         <ActivityListSkeleton />
       ) : (
-        <RecentActivityCard activities={activities} />
+        <RecentActivityCard activities={activities} variant="detailed" />
       )}
     </main>
   );
