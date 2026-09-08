@@ -22,6 +22,7 @@ import type {
   CreateChallengeInput,
   User,
   VarietyKindConfig,
+  ZoneConfig,
 } from "@/types";
 import { generateInviteToken } from "@/lib/challenges/invite";
 import {
@@ -199,6 +200,15 @@ export async function updateVarietyKinds(
 ): Promise<void> {
   await updateDoc(doc(firestoreDb(), COLLECTIONS.challenges, challengeId), {
     varietyConfig: { kinds },
+  });
+}
+
+export async function updateZoneConfig(
+  challengeId: string,
+  zoneConfig: ZoneConfig
+): Promise<void> {
+  await updateDoc(doc(firestoreDb(), COLLECTIONS.challenges, challengeId), {
+    zoneConfig,
   });
 }
 

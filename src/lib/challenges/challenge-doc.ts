@@ -29,9 +29,10 @@ export function buildNewChallenge(
     scoring: input.scoring,
     sportType: isGoal ? input.sportType : null,
     goal: isGoal ? input.goal : null,
-    // Rules are frozen onto the doc so future default changes don't
-    // rewrite running/finished challenges
-    zoneConfig: input.scoring === "zone" ? DEFAULT_ZONE_CONFIG : null,
+    // Rules are frozen onto the doc so future default changes (or later
+    // edits via the creator's "Edit zone rules" card) don't rewrite
+    // running/finished challenges
+    zoneConfig: input.scoring === "zone" ? input.zoneConfig : null,
     varietyConfig: input.scoring === "variety" ? input.varietyConfig : null,
     startDate: input.startDate,
     endDate: input.endDate,

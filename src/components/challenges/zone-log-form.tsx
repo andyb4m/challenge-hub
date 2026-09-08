@@ -210,7 +210,7 @@ export function ZoneLogForm({
             <p className="text-sm text-muted">
               Yoga, stretching, sauna… {config.recoveryPoints} pts — max once
               per calendar week, and it counts toward your low-intensity
-              80/20 ratio.
+              ratio.
             </p>
           )}
 

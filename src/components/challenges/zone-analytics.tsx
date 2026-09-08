@@ -74,7 +74,7 @@ export function ZoneAnalytics({
           </ul>
         )}
         <p className="rounded-md border border-info/30 bg-info/10 px-4 py-3 text-xs text-info">
-          <span className="font-semibold">The 80/20 rule:</span> endurance
+          <span className="font-semibold">Low-intensity bonus:</span> endurance
           athletes improve fastest when most training stays easy. Keep your
           low-intensity share between {Math.round(config.bonus.low * 100)}%
           and {Math.round(config.bonus.high * 100)}% and all your points get

@@ -19,7 +19,9 @@ import { firstError } from "@/lib/auth/validation";
 import { localToday } from "@/lib/challenges/scoring";
 import { defaultVarietyKinds } from "@/lib/challenges/variety";
 import { VarietyKindsEditor } from "@/components/challenges/variety-kinds-editor";
-import type { VarietyKindConfig } from "@/types";
+import { DEFAULT_ZONE_CONFIG } from "@/lib/challenges/zone";
+import { ZoneConfigEditor } from "@/components/challenges/zone-config-editor";
+import type { VarietyKindConfig, ZoneConfig } from "@/types";
 import { useAuth } from "@/lib/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -72,6 +74,7 @@ export function ChallengeForm() {
   const [varietyKinds, setVarietyKinds] = useState<VarietyKindConfig[]>(
     defaultVarietyKinds
   );
+  const [zoneConfig, setZoneConfig] = useState<ZoneConfig>(DEFAULT_ZONE_CONFIG);
   const [startDate, setStartDate] = useState(localToday());
   const [endDate, setEndDate] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -93,6 +96,7 @@ export function ChallengeForm() {
         scoring === "variety"
           ? { kinds: varietyKinds.map((k) => ({ ...k, label: k.label.trim() })) }
           : null,
+      zoneConfig: scoring === "zone" ? zoneConfig : null,
       startDate,
       endDate,
     };
@@ -228,15 +232,18 @@ export function ChallengeForm() {
           )}
 
           {scoring === "zone" && (
-            <div className="rounded-md border border-info/30 bg-info/10 px-4 py-3 text-sm text-info">
-              <p className="font-semibold">How zone scoring works</p>
-              <ul className="mt-1 list-inside list-disc text-info/90">
-                <li>Zone training: Z2 ×1.0 · Z3 ×0.5 · Z4 ×1.5 · Z5 ×2.0 points per minute</li>
-                <li>Other workouts: 20 pts (≥30 min) or 40 pts (≥60 min)</li>
-                <li>Recovery (yoga, sauna…): 30 pts, max once per week</li>
-                <li>80/20 bonus: keep 70–85% of your training low-intensity → all points ×1.15 ⭐</li>
-              </ul>
-            </div>
+            <>
+              <div className="rounded-md border border-info/30 bg-info/10 px-4 py-3 text-sm text-info">
+                <p className="font-semibold">How zone scoring works</p>
+                <p className="mt-1 text-info/90">
+                  Heart-rate zone minutes and flat-point workout types earn
+                  points; keeping training mostly low-intensity within a
+                  target range earns a bonus ⭐. Sensible defaults are
+                  pre-filled below — customize them if you want.
+                </p>
+              </div>
+              <ZoneConfigEditor config={zoneConfig} onChange={setZoneConfig} />
+            </>
           )}
 
           {scoring === "variety" && (

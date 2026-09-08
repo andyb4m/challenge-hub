@@ -22,14 +22,20 @@ import { cn } from "@/lib/utils";
 
 const ZONE_KEYS = ["z2", "z3", "z4", "z5"] as const;
 
+function bonusPercent(config: { bonus: { multiplier: number } }): number {
+  return Math.round((config.bonus.multiplier - 1) * 100);
+}
+
 function leaderboardBlurb(challenge: Challenge): string {
   switch (challengeScoring(challenge)) {
     case "goal":
       return challenge.goal
         ? `First to ${formatTotal(challenge.goal.value, challenge.goal.unit)} — or the furthest along when time runs out.`
         : "";
-    case "zone":
-      return "Points from zones, workouts and recovery. ⭐ = 80/20 low-intensity bonus (×1.15) active.";
+    case "zone": {
+      const bonusPct = bonusPercent(challenge.zoneConfig ?? DEFAULT_ZONE_CONFIG);
+      return `Points from zones, workouts and recovery. ⭐ = low-intensity bonus (+${bonusPct}%) active.`;
+    }
     case "variety":
       return `Most different sports wins — ${VARIETY_KINDS.length} kinds to collect.`;
   }
@@ -92,9 +98,9 @@ export function Leaderboard({
                       {bonus && (
                         <span
                           className="ml-1.5 rounded-full bg-warning/10 px-1.5 py-0.5 text-xs font-semibold text-warning"
-                          title="80/20 low-intensity bonus active: ×1.15"
+                          title={`Low-intensity bonus active: +${bonusPercent(zoneConfig)}%`}
                         >
-                          ⭐ +15%
+                          ⭐ +{bonusPercent(zoneConfig)}%
                         </span>
                       )}
                     </span>

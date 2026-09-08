@@ -25,6 +25,7 @@ import { ProgressChart } from "@/components/challenges/progress-chart";
 import { buildZoneProgressChart } from "@/lib/challenges/progress-chart";
 import { VarietyCollection } from "@/components/challenges/variety-collection";
 import { VarietyManageCard } from "@/components/challenges/variety-manage-card";
+import { ZoneManageCard } from "@/components/challenges/zone-manage-card";
 import { InviteLinkButton } from "@/components/challenges/invite-link-button";
 
 function ChallengeDetail({ challengeId }: { challengeId: string }) {
@@ -115,6 +116,9 @@ function ChallengeDetail({ challengeId }: { challengeId: string }) {
         <>
           <ZoneAnalytics challenge={challenge} members={members} />
           <ProgressChart data={buildZoneProgressChart(activities, members)} />
+          {challenge.createdBy === user.uid && (
+            <ZoneManageCard challenge={challenge} />
+          )}
         </>
       )}
 
