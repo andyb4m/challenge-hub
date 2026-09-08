@@ -195,3 +195,24 @@ export function localToday(now: Date = new Date()): string {
   const day = String(now.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Splits the user's challenges for the hub: active/upcoming ones (things
+ * still worth looking at) and ended ones (history), each sorted by start
+ * date, most recent first.
+ */
+export function splitChallengesForHub<
+  T extends Pick<Challenge, "startDate" | "endDate">,
+>(challenges: T[], today: string): { current: T[]; past: T[] } {
+  const sorted = [...challenges].sort((a, b) =>
+    a.startDate < b.startDate ? 1 : a.startDate > b.startDate ? -1 : 0
+  );
+  const current: T[] = [];
+  const past: T[] = [];
+  for (const challenge of sorted) {
+    (challengeStatus(challenge, today) === "ended" ? past : current).push(
+      challenge
+    );
+  }
+  return { current, past };
+}

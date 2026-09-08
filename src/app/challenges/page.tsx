@@ -8,12 +8,16 @@ import { HubHeader } from "@/components/challenges/hub-header";
 import { RecentActivityCard } from "@/components/challenges/recent-activity-card";
 import { useAuth } from "@/lib/auth/auth-context";
 import { useMyChallenges, useMyOverview } from "@/lib/challenges/hooks";
+import { localToday, splitChallengesForHub } from "@/lib/challenges/scoring";
 import { Button } from "@/components/ui/button";
+
+const PAST_PREVIEW_COUNT = 3;
 
 function ChallengesContent() {
   const { profile } = useAuth();
   const { challenges, isLoading } = useMyChallenges();
   const overview = useMyOverview(challenges);
+  const { current, past } = splitChallengesForHub(challenges, localToday());
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-4 py-8">
@@ -46,12 +50,42 @@ function ChallengesContent() {
             Create one and share the invite link, or ask a friend for theirs.
           </p>
         </div>
+      ) : current.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-line p-8 text-center">
+          <p className="text-muted">No active or upcoming challenges.</p>
+          <p className="mt-1 text-sm text-muted">
+            Create one, or check your past challenges below.
+          </p>
+        </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {challenges.map((challenge) => (
+          {current.map((challenge) => (
             <ChallengeCard key={challenge.id} challenge={challenge} />
           ))}
         </div>
+      )}
+
+      {past.length > 0 && (
+        <>
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-bold text-foreground">
+              Past challenges
+            </h2>
+            {past.length > PAST_PREVIEW_COUNT && (
+              <Link
+                href="/challenges/past"
+                className="text-sm text-muted hover:text-foreground"
+              >
+                See all
+              </Link>
+            )}
+          </div>
+          <div className="flex flex-col gap-3">
+            {past.slice(0, PAST_PREVIEW_COUNT).map((challenge) => (
+              <ChallengeCard key={challenge.id} challenge={challenge} />
+            ))}
+          </div>
+        </>
       )}
 
       <div className="flex items-center justify-between">
