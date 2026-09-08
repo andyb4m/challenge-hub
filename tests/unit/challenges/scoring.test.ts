@@ -11,6 +11,7 @@ import {
   memberTotalInUnit,
   rankMembers,
   rankMembersForChallenge,
+  splitChallengesForHub,
 } from "@/lib/challenges/scoring";
 import { DEFAULT_ZONE_CONFIG } from "@/lib/challenges/zone";
 import { VARIETY_KINDS } from "@/lib/challenges/variety";
@@ -193,6 +194,42 @@ describe("challengeStatus", () => {
 
   it("is ended after the end date", () => {
     expect(challengeStatus(window, "2026-08-01")).toBe("ended");
+  });
+});
+
+describe("splitChallengesForHub", () => {
+  const today = "2026-08-15";
+  const c = (id: string, startDate: string, endDate: string) => ({
+    id,
+    startDate,
+    endDate,
+  });
+
+  it("separates ended challenges into past, everything else into current", () => {
+    const challenges = [
+      c("ended", "2026-07-01", "2026-07-31"),
+      c("active", "2026-08-01", "2026-08-31"),
+      c("upcoming", "2026-09-01", "2026-09-30"),
+    ];
+    const { current, past } = splitChallengesForHub(challenges, today);
+    expect(current.map((x) => x.id)).toEqual(["upcoming", "active"]);
+    expect(past.map((x) => x.id)).toEqual(["ended"]);
+  });
+
+  it("sorts each group by start date, most recent first", () => {
+    const challenges = [
+      c("older-ended", "2026-06-01", "2026-06-30"),
+      c("newer-ended", "2026-07-01", "2026-07-31"),
+    ];
+    const { past } = splitChallengesForHub(challenges, today);
+    expect(past.map((x) => x.id)).toEqual(["newer-ended", "older-ended"]);
+  });
+
+  it("returns empty arrays for no challenges", () => {
+    expect(splitChallengesForHub([], today)).toEqual({
+      current: [],
+      past: [],
+    });
   });
 });
 
