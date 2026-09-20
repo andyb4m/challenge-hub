@@ -34,7 +34,7 @@ export function DeleteAccountCard({ user }: { user: FirebaseUser }) {
   }
 
   return (
-    <Card className="border-error/30">
+    <Card className="border border-error/30">
       <CardHeader>
         <CardTitle className="text-error">Delete account</CardTitle>
         <CardDescription>

@@ -15,7 +15,7 @@ export function AdminUserList({ users }: { users: AdminUserSummary[] }) {
     <div className="flex flex-col gap-2">
       {users.map((user) => (
         <Link key={user.uid} href={`/admin/users/${user.uid}`} className="block">
-          <Card className="transition-all duration-300 hover:-translate-y-0.5 hover:border-primary hover:bg-card-hover">
+          <Card className="transition-colors duration-200 hover:bg-card-hover">
             <CardContent className="flex items-center justify-between gap-3 p-4">
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium text-foreground">

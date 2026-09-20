@@ -6,6 +6,7 @@ import {
   formatScore,
   formatTotal,
   goalProgress,
+  groupActivitiesByDate,
   memberProgress,
   memberScore,
   memberTotalInUnit,
@@ -246,5 +247,36 @@ describe("formatTotal", () => {
   it("pluralises counts", () => {
     expect(formatTotal(1, "count")).toBe("1 activity");
     expect(formatTotal(12, "count")).toBe("12 activities");
+  });
+});
+
+describe("groupActivitiesByDate", () => {
+  function activity(id: string, startDate: string) {
+    return { id, startDate };
+  }
+
+  it("groups consecutive same-day activities together", () => {
+    const groups = groupActivitiesByDate([
+      activity("a", "2026-09-15T08:00:00.000Z"),
+      activity("b", "2026-09-15T18:30:00.000Z"),
+      activity("c", "2026-09-14T09:00:00.000Z"),
+    ]);
+    expect(groups).toEqual([
+      { date: "2026-09-15", activities: [activity("a", "2026-09-15T08:00:00.000Z"), activity("b", "2026-09-15T18:30:00.000Z")] },
+      { date: "2026-09-14", activities: [activity("c", "2026-09-14T09:00:00.000Z")] },
+    ]);
+  });
+
+  it("returns an empty array for no activities", () => {
+    expect(groupActivitiesByDate([])).toEqual([]);
+  });
+
+  it("does not merge non-adjacent entries on the same date", () => {
+    const groups = groupActivitiesByDate([
+      activity("a", "2026-09-15T08:00:00.000Z"),
+      activity("b", "2026-09-14T08:00:00.000Z"),
+      activity("c", "2026-09-15T09:00:00.000Z"),
+    ]);
+    expect(groups.map((g) => g.date)).toEqual(["2026-09-15", "2026-09-14", "2026-09-15"]);
   });
 });

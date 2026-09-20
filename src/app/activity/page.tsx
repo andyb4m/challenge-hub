@@ -1,7 +1,7 @@
 "use client";
 
 import { RequireAuth } from "@/components/auth/require-auth";
-import { RecentActivityCard } from "@/components/challenges/recent-activity-card";
+import { ActivitySchedule } from "@/components/challenges/activity-schedule";
 import { ActivityListSkeleton } from "@/components/challenges/activity-list-skeleton";
 import { useMyActivities, useMyChallenges } from "@/lib/challenges/hooks";
 
@@ -18,7 +18,7 @@ function ActivityContent() {
       {loading ? (
         <ActivityListSkeleton />
       ) : (
-        <RecentActivityCard activities={activities} variant="detailed" />
+        <ActivitySchedule activities={activities} />
       )}
     </main>
   );
