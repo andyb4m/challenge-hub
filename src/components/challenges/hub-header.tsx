@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import type { User } from "@/types";
-import { Card } from "@/components/ui/card";
 
 // Client-only: the greeting depends on the viewer's local hour, which the
 // server render can't know (and would otherwise mismatch on hydration).
@@ -24,28 +23,26 @@ export function HubHeader({
   }, []);
 
   return (
-    <Card variant="hero" className="overflow-hidden">
-      <div className="flex items-center gap-3 p-6">
-        {profile.photoURL ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={profile.photoURL}
-            alt=""
-            referrerPolicy="no-referrer"
-            className="h-12 w-12 shrink-0 rounded-full object-cover"
-          />
-        ) : (
-          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-line text-lg font-medium text-muted">
-            {profile.displayName.charAt(0).toUpperCase()}
-          </span>
-        )}
-        <div className="min-w-0">
-          <p className="truncate text-xl font-bold tracking-tight text-foreground">
-            Hi {profile.displayName}
-          </p>
-          <p className="text-sm text-muted">{greeting ?? " "}</p>
-        </div>
+    <div className="flex items-center gap-3">
+      {profile.photoURL ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={profile.photoURL}
+          alt=""
+          referrerPolicy="no-referrer"
+          className="h-12 w-12 shrink-0 rounded-full object-cover"
+        />
+      ) : (
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-line text-lg font-medium text-muted">
+          {profile.displayName.charAt(0).toUpperCase()}
+        </span>
+      )}
+      <div className="min-w-0">
+        <p className="truncate text-xl font-bold tracking-tight text-foreground">
+          Hi {profile.displayName}
+        </p>
+        <p className="text-sm text-muted">{greeting ?? " "}</p>
       </div>
-    </Card>
+    </div>
   );
 }

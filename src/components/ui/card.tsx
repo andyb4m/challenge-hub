@@ -1,29 +1,11 @@
 import { type HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-type Variant = "default" | "hero";
-
 // Flat by design — no border, no ambient shadow. Surfaces separate from the
 // page by background color alone (bg-card vs. the darker page background).
-// "hero" is for the one or two most prominent panels per page (e.g. the hub's
-// own-profile summary) — reuses the existing background.secondary token
-// rather than a new color, so it stays distinguishable without every panel
-// competing for the same amount of visual weight.
-const variantClasses: Record<Variant, string> = {
-  default: "bg-card",
-  hero: "bg-background-secondary",
-};
-
-export interface CardProps extends HTMLAttributes<HTMLDivElement> {
-  variant?: Variant;
-}
-
-export function Card({ className, variant = "default", ...props }: CardProps) {
+export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div
-      className={cn("rounded-2xl", variantClasses[variant], className)}
-      {...props}
-    />
+    <div className={cn("rounded-2xl bg-card", className)} {...props} />
   );
 }
 
