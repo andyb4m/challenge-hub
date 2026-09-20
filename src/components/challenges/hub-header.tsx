@@ -13,7 +13,7 @@ export function HubHeader({
   totalActivities: number;
 }) {
   return (
-    <Card className="overflow-hidden">
+    <Card variant="hero" className="overflow-hidden">
       <div className="flex flex-col gap-4 p-6">
         <div className="flex items-center gap-3">
           {profile.photoURL ? (
@@ -47,7 +47,9 @@ export function HubHeader({
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="text-center">
-      <p className="text-lg font-bold text-foreground sm:text-xl">{value}</p>
+      <p className="text-2xl font-bold tabular-nums tracking-tight text-foreground sm:text-3xl">
+        {value}
+      </p>
       <p className="whitespace-nowrap text-xs text-muted">{label}</p>
     </div>
   );
