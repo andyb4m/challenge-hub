@@ -32,3 +32,13 @@ body {
 input[type="date"]::-webkit-calendar-picker-indicator {
   filter: invert(0.7);
 }
+
+/* Hides the native scrollbar on horizontal swipe carousels (ChallengeCarousel)
+   in favor of an explicit dot indicator. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
