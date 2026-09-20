@@ -104,7 +104,7 @@ export function Leaderboard({
                         </span>
                       )}
                     </span>
-                    <span className="whitespace-nowrap text-sm text-muted">
+                    <span className="whitespace-nowrap text-base font-bold tabular-nums text-foreground">
                       {formatScore(challenge, member)}
                     </span>
                   </div>

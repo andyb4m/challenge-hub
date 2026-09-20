@@ -18,7 +18,6 @@ import { COLLECTIONS } from "@/lib/firebase/collections";
 import type {
   Activity,
   Challenge,
-  ChallengeMember,
   CreateChallengeInput,
   User,
   VarietyKindConfig,
@@ -265,21 +264,6 @@ export interface RecentActivity {
   startDate: string;
   source: Activity["source"];
   stravaActivityId: number | null;
-}
-
-/** Sum of the user's activityCount across all of their challenges. */
-export async function fetchMyActivityCount(
-  challengeIds: string[],
-  uid: string
-): Promise<number> {
-  const db = firestoreDb();
-  const snapshots = await Promise.all(
-    challengeIds.map((id) => getDoc(doc(db, COLLECTIONS.members(id), uid)))
-  );
-  return snapshots.reduce((sum, snap) => {
-    const member = snap.data() as ChallengeMember | undefined;
-    return sum + (member?.activityCount ?? 0);
-  }, 0);
 }
 
 /**

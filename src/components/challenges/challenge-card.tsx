@@ -22,10 +22,12 @@ export function ChallengeCard({ challenge }: { challenge: Challenge }) {
 
   return (
     <Link href={`/challenges/${challenge.id}`} className="block">
-      <Card className="transition-all duration-300 hover:-translate-y-1 hover:border-primary hover:bg-card-hover">
+      <Card className="transition-colors duration-200 hover:bg-card-hover">
         <CardContent className="flex flex-col gap-2 p-5">
           <div className="flex items-center justify-between gap-2">
-            <h3 className="font-semibold text-foreground">{challenge.name}</h3>
+            <h3 className="text-base font-semibold tracking-tight text-foreground sm:text-lg">
+              {challenge.name}
+            </h3>
             <span
               className={cn(
                 "rounded-full px-2 py-0.5 text-xs font-medium capitalize",

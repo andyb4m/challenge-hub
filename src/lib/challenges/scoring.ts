@@ -216,3 +216,30 @@ export function splitChallengesForHub<
   }
   return { current, past };
 }
+
+export interface ActivityDayGroup<T> {
+  date: string;
+  activities: T[];
+}
+
+/**
+ * Groups already newest-first-sorted activities by calendar day (the date
+ * portion of `startDate`, same UTC-string slicing used for display
+ * elsewhere), for a schedule/calendar-style activity view. Relies on the
+ * input already being sorted so same-day entries are adjacent.
+ */
+export function groupActivitiesByDate<T extends { startDate: string }>(
+  activities: T[]
+): ActivityDayGroup<T>[] {
+  const groups: ActivityDayGroup<T>[] = [];
+  for (const activity of activities) {
+    const date = activity.startDate.slice(0, 10);
+    const last = groups[groups.length - 1];
+    if (last?.date === date) {
+      last.activities.push(activity);
+    } else {
+      groups.push({ date, activities: [activity] });
+    }
+  }
+  return groups;
+}

@@ -1,15 +1,11 @@
 import { type HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
+// Flat by design — no border, no ambient shadow. Surfaces separate from the
+// page by background color alone (bg-card vs. the darker page background).
 export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div
-      className={cn(
-        "rounded-2xl border border-line bg-card shadow-card",
-        className
-      )}
-      {...props}
-    />
+    <div className={cn("rounded-2xl bg-card", className)} {...props} />
   );
 }
 

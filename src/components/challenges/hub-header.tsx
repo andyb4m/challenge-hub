@@ -1,54 +1,48 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import type { User } from "@/types";
-import { Card } from "@/components/ui/card";
+
+// Client-only: the greeting depends on the viewer's local hour, which the
+// server render can't know (and would otherwise mismatch on hydration).
+function greetingForHour(hour: number): string {
+  if (hour < 12) return "Good morning — time to get moving.";
+  if (hour < 18) return "Good afternoon — keep the streak going.";
+  return "Good evening — still time to log a workout.";
+}
 
 export function HubHeader({
   profile,
-  activeChallengeCount,
-  totalChallengeCount,
-  totalActivities,
 }: {
   profile: Pick<User, "displayName" | "photoURL">;
-  activeChallengeCount: number;
-  totalChallengeCount: number;
-  totalActivities: number;
 }) {
-  return (
-    <Card className="overflow-hidden">
-      <div className="flex flex-col gap-4 p-6">
-        <div className="flex items-center gap-3">
-          {profile.photoURL ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={profile.photoURL}
-              alt=""
-              referrerPolicy="no-referrer"
-              className="h-12 w-12 rounded-full object-cover"
-            />
-          ) : (
-            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-line text-lg font-medium text-muted">
-              {profile.displayName.charAt(0).toUpperCase()}
-            </span>
-          )}
-          <p className="truncate font-semibold text-foreground">
-            {profile.displayName}
-          </p>
-        </div>
+  const [greeting, setGreeting] = useState<string | null>(null);
 
-        <div className="grid grid-cols-3 gap-2">
-          <Stat label="Active" value={activeChallengeCount} />
-          <Stat label="Challenges" value={totalChallengeCount} />
-          <Stat label="Activities" value={totalActivities} />
-        </div>
+  useEffect(() => {
+    setGreeting(greetingForHour(new Date().getHours()));
+  }, []);
+
+  return (
+    <div className="flex items-center gap-3">
+      {profile.photoURL ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={profile.photoURL}
+          alt=""
+          referrerPolicy="no-referrer"
+          className="h-12 w-12 shrink-0 rounded-full object-cover"
+        />
+      ) : (
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-line text-lg font-medium text-muted">
+          {profile.displayName.charAt(0).toUpperCase()}
+        </span>
+      )}
+      <div className="min-w-0">
+        <p className="truncate text-xl font-bold tracking-tight text-foreground">
+          Hi {profile.displayName}
+        </p>
+        <p className="text-sm text-muted">{greeting ?? " "}</p>
       </div>
-    </Card>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="text-center">
-      <p className="text-lg font-bold text-foreground sm:text-xl">{value}</p>
-      <p className="whitespace-nowrap text-xs text-muted">{label}</p>
     </div>
   );
 }

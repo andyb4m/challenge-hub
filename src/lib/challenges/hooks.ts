@@ -14,11 +14,9 @@ import { COLLECTIONS } from "@/lib/firebase/collections";
 import { useAuth } from "@/lib/auth/auth-context";
 import {
   fetchChallengesByIds,
-  fetchMyActivityCount,
   fetchMyRecentActivities,
   type RecentActivity,
 } from "@/lib/challenges/service";
-import { challengeStatus, localToday } from "@/lib/challenges/scoring";
 import type { Activity, Challenge, ChallengeMember } from "@/types";
 
 /** The signed-in user's challenges; refetches when their membership changes. */
@@ -90,14 +88,11 @@ export function useActivities(challengeId: string) {
 }
 
 export interface MyOverview {
-  totalActivities: number;
-  activeChallengeCount: number;
-  totalChallengeCount: number;
   recentActivities: RecentActivity[];
   isLoading: boolean;
 }
 
-/** Quick-glance stats for the signed-in user across all their challenges. */
+/** The signed-in user's recent activity across all their challenges, for the hub teaser. */
 export function useMyOverview(challenges: Challenge[]): MyOverview {
   const { profile } = useAuth();
   const uid = profile?.uid;
@@ -105,25 +100,14 @@ export function useMyOverview(challenges: Challenge[]): MyOverview {
 
   const { data, isLoading } = useSWR(
     uid ? ["my-overview", uid, ...challengeIds] : null,
-    async () => {
-      if (challengeIds.length === 0) {
-        return { totalActivities: 0, recentActivities: [] };
-      }
-      const [totalActivities, recentActivities] = await Promise.all([
-        fetchMyActivityCount(challengeIds, uid!),
-        fetchMyRecentActivities(challenges, uid!),
-      ]);
-      return { totalActivities, recentActivities };
-    }
+    () =>
+      challengeIds.length === 0
+        ? Promise.resolve([])
+        : fetchMyRecentActivities(challenges, uid!)
   );
 
   return {
-    totalActivities: data?.totalActivities ?? 0,
-    recentActivities: data?.recentActivities ?? [],
-    activeChallengeCount: challenges.filter(
-      (c) => challengeStatus(c, localToday()) === "active"
-    ).length,
-    totalChallengeCount: challenges.length,
+    recentActivities: data ?? [],
     isLoading,
   };
 }

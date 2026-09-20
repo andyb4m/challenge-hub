@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { RequireAuth } from "@/components/auth/require-auth";
-import { ChallengeCard } from "@/components/challenges/challenge-card";
+import { ChallengeCarousel } from "@/components/challenges/challenge-carousel";
 import { ChallengeListSkeleton } from "@/components/challenges/challenge-list-skeleton";
 import { HubHeader } from "@/components/challenges/hub-header";
 import { RecentActivityCard } from "@/components/challenges/recent-activity-card";
@@ -21,14 +21,7 @@ function ChallengesContent() {
 
   return (
     <main className="mx-auto flex max-w-2xl flex-col gap-6 p-4 py-8">
-      {profile && (
-        <HubHeader
-          profile={profile}
-          activeChallengeCount={overview.activeChallengeCount}
-          totalChallengeCount={overview.totalChallengeCount}
-          totalActivities={overview.totalActivities}
-        />
-      )}
+      {profile && <HubHeader profile={profile} />}
 
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-foreground">Your challenges</h1>
@@ -58,11 +51,7 @@ function ChallengesContent() {
           </p>
         </div>
       ) : (
-        <div className="flex flex-col gap-3">
-          {current.map((challenge) => (
-            <ChallengeCard key={challenge.id} challenge={challenge} />
-          ))}
-        </div>
+        <ChallengeCarousel challenges={current} />
       )}
 
       {past.length > 0 && (
@@ -80,11 +69,7 @@ function ChallengesContent() {
               </Link>
             )}
           </div>
-          <div className="flex flex-col gap-3">
-            {past.slice(0, PAST_PREVIEW_COUNT).map((challenge) => (
-              <ChallengeCard key={challenge.id} challenge={challenge} />
-            ))}
-          </div>
+          <ChallengeCarousel challenges={past.slice(0, PAST_PREVIEW_COUNT)} />
         </>
       )}
 

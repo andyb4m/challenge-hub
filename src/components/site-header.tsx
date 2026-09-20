@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { signOutUser } from "@/lib/auth/service";
 import { Button } from "@/components/ui/button";
 import { AccountMenu } from "@/components/account-menu";
+import { cn } from "@/lib/utils";
 
 export function SiteHeader() {
   const { user, profile, loading } = useAuth();
@@ -17,7 +18,16 @@ export function SiteHeader() {
   }
 
   return (
-    <header className="sticky top-0 z-10 border-b border-line bg-background/90 backdrop-blur-xl">
+    <header
+      className={cn(
+        "sticky top-0 z-10 border-b border-line bg-background/90 backdrop-blur-xl",
+        // Bottom nav owns navigation on mobile once signed in — this bar
+        // would just be a permanent, non-functional wordmark strip there.
+        // Signed-out flows (landing/login/register) still need it for
+        // branding + the Sign in/Get started nav.
+        !loading && user && "hidden sm:block"
+      )}
+    >
       <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-4">
         <Link href="/" className="font-semibold text-foreground">
           Challenge Hub
