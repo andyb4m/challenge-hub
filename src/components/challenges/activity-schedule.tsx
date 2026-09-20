@@ -3,6 +3,10 @@ import { groupActivitiesByDate, localToday } from "@/lib/challenges/scoring";
 import { cn } from "@/lib/utils";
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const MONTH_LABELS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
 
 // Parsed as UTC (matching the app-wide convention of slicing startDate's
 // date portion directly, see groupActivitiesByDate) to avoid a local-
@@ -14,6 +18,11 @@ function weekdayLabel(date: string): string {
 
 function dayNumber(date: string): string {
   return String(Number(date.slice(8, 10)));
+}
+
+function monthLabel(date: string): string {
+  const [year, month] = date.split("-").map(Number);
+  return `${MONTH_LABELS[month - 1]} ${year}`;
 }
 
 function StravaBadge() {
@@ -40,46 +49,63 @@ export function ActivitySchedule({
 
   return (
     <div className="flex flex-col">
-      {groups.map((group) => {
+      {groups.map((group, i) => {
         const isToday = group.date === today;
+        const isLast = i === groups.length - 1;
+        const showMonthHeader =
+          i === 0 || groups[i - 1].date.slice(0, 7) !== group.date.slice(0, 7);
         return (
-          <div
-            key={group.date}
-            className="flex gap-4 border-b border-line/40 py-4 first:pt-0 last:border-b-0 last:pb-0"
-          >
-            <div className="flex w-11 shrink-0 flex-col items-center gap-0.5 pt-0.5">
-              <span className="text-xs uppercase text-muted">
-                {isToday ? "Today" : weekdayLabel(group.date)}
-              </span>
-              <span
+          <div key={group.date}>
+            {showMonthHeader && (
+              <h2
                 className={cn(
-                  "flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold",
-                  isToday ? "bg-primary text-white" : "text-foreground"
+                  "pb-2 text-sm font-semibold text-foreground",
+                  i === 0 ? "pt-0" : "pt-4"
                 )}
               >
-                {dayNumber(group.date)}
-              </span>
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col gap-2">
-              {group.activities.map((activity) => (
-                <div
-                  key={activity.id}
+                {monthLabel(group.date)}
+              </h2>
+            )}
+            <div
+              className={cn(
+                "flex gap-4 py-3",
+                !isLast && "border-b border-line/40"
+              )}
+            >
+              <div className="flex w-11 shrink-0 flex-col items-center gap-0.5 pt-0.5">
+                <span className="text-xs uppercase text-muted">
+                  {isToday ? "Today" : weekdayLabel(group.date)}
+                </span>
+                <span
                   className={cn(
-                    "min-w-0 rounded-lg border-l-4 bg-card py-2 pl-3 pr-3",
-                    activity.source === "strava"
-                      ? "border-l-[#FC4C02]"
-                      : "border-l-primary"
+                    "flex h-7 w-7 items-center justify-center rounded-full text-sm font-bold",
+                    isToday ? "bg-primary text-white" : "text-foreground"
                   )}
                 >
-                  <p className="truncate text-sm font-medium text-foreground">
-                    {activity.name}
-                    {activity.source === "strava" && <StravaBadge />}
-                  </p>
-                  <p className="truncate text-xs text-muted">
-                    {activity.challengeName}
-                  </p>
-                </div>
-              ))}
+                  {dayNumber(group.date)}
+                </span>
+              </div>
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                {group.activities.map((activity) => (
+                  <div
+                    key={activity.id}
+                    className={cn(
+                      "min-w-0 rounded-lg border-l-4 bg-card py-2 pl-3 pr-3",
+                      activity.source === "strava"
+                        ? "border-l-[#FC4C02]"
+                        : "border-l-primary"
+                    )}
+                  >
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {activity.name}
+                      {activity.source === "strava" && <StravaBadge />}
+                    </p>
+                    <p className="truncate text-xs text-muted">
+                      {activity.challengeName}
+                    </p>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
         );

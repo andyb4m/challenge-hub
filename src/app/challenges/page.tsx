@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { RequireAuth } from "@/components/auth/require-auth";
-import { ChallengeCard } from "@/components/challenges/challenge-card";
+import { ChallengeCarousel } from "@/components/challenges/challenge-carousel";
 import { ChallengeListSkeleton } from "@/components/challenges/challenge-list-skeleton";
 import { HubHeader } from "@/components/challenges/hub-header";
 import { RecentActivityCard } from "@/components/challenges/recent-activity-card";
@@ -51,16 +51,7 @@ function ChallengesContent() {
           </p>
         </div>
       ) : (
-        <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-col sm:overflow-visible sm:px-0 sm:pb-0">
-          {current.map((challenge) => (
-            <div
-              key={challenge.id}
-              className="w-[82%] shrink-0 snap-start sm:w-full sm:shrink"
-            >
-              <ChallengeCard challenge={challenge} />
-            </div>
-          ))}
-        </div>
+        <ChallengeCarousel challenges={current} />
       )}
 
       {past.length > 0 && (
@@ -78,11 +69,7 @@ function ChallengesContent() {
               </Link>
             )}
           </div>
-          <div className="flex flex-col gap-3">
-            {past.slice(0, PAST_PREVIEW_COUNT).map((challenge) => (
-              <ChallengeCard key={challenge.id} challenge={challenge} />
-            ))}
-          </div>
+          <ChallengeCarousel challenges={past.slice(0, PAST_PREVIEW_COUNT)} />
         </>
       )}
 

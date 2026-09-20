@@ -43,7 +43,7 @@ export function HubHeader({
           <p className="truncate text-xl font-bold tracking-tight text-foreground">
             Hi {profile.displayName}
           </p>
-          <p className="truncate text-sm text-muted">{greeting ?? " "}</p>
+          <p className="text-sm text-muted">{greeting ?? " "}</p>
         </div>
       </div>
     </Card>
