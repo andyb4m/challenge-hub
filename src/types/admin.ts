@@ -1,3 +1,11 @@
+/** A count for the current period vs. the equal-length period before it. */
+export interface AdminTrend {
+  current: number;
+  previous: number;
+  /** null when there's no previous-period baseline to compare against (previous === 0) */
+  deltaPct: number | null;
+}
+
 export interface AdminStats {
   totalUsers: number;
   newUsersLast7Days: number;
@@ -17,6 +25,14 @@ export interface AdminStats {
   usersActiveLast7Days: number;
   usersActiveLast30Days: number;
   mostActiveChallenge: { id: string; name: string; activityCount: number } | null;
+  /** new users, last 7 days vs. the 7 days before that */
+  newUsersTrend: AdminTrend;
+  /** activities logged, last 7 days vs. the 7 days before that */
+  activitiesTrend: AdminTrend;
+  /** activities logged per ISO week (Monday start), oldest first */
+  weeklyActivity: { weekStart: string; count: number }[];
+  /** activities logged per weekday, index 0 = Sunday .. 6 = Saturday */
+  activityByWeekday: number[];
 }
 
 export interface AdminUserSummary {

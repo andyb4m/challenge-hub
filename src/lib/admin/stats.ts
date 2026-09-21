@@ -1,8 +1,17 @@
-import type { Activity, AdminStats, AdminUserSummary, Challenge, User } from "@/types";
+import type {
+  Activity,
+  AdminStats,
+  AdminTrend,
+  AdminUserSummary,
+  Challenge,
+  User,
+} from "@/types";
 import { challengeScoring, challengeStatus } from "@/lib/challenges/scoring";
 
 /** Just the fields the aggregation actually needs from an activity. */
 type ActivityForStats = Pick<Activity, "uid" | "source" | "startDate">;
+
+const WEEKS_OF_ACTIVITY_HISTORY = 8;
 
 /**
  * Pure aggregation over already-fetched Firestore data — no Firestore
@@ -85,6 +94,18 @@ export function buildAdminDashboard(
       (u) => u.lastActivityDate !== null && daysBetween(u.lastActivityDate, today) <= 30
     ).length,
     mostActiveChallenge,
+    newUsersTrend: trend(
+      users.map((u) => u.createdAt),
+      today,
+      7
+    ),
+    activitiesTrend: trend(
+      allActivities.map((a) => a.startDate),
+      today,
+      7
+    ),
+    weeklyActivity: buildWeeklyActivity(allActivities, today, WEEKS_OF_ACTIVITY_HISTORY),
+    activityByWeekday: buildActivityByWeekday(allActivities),
   };
 
   return { stats, userSummaries };
@@ -99,4 +120,64 @@ function daysBetween(date: string, today: string): number {
 
 function round1(n: number): number {
   return Math.round(n * 10) / 10;
+}
+
+/** Counts `dates` in the last `windowDays` vs. the equal-length window before that. */
+function trend(dates: string[], today: string, windowDays: number): AdminTrend {
+  const current = dates.filter((d) => daysBetween(d, today) <= windowDays).length;
+  const previous = dates.filter((d) => {
+    const diff = daysBetween(d, today);
+    return diff > windowDays && diff <= windowDays * 2;
+  }).length;
+  return {
+    current,
+    previous,
+    deltaPct: previous === 0 ? null : round1(((current - previous) / previous) * 100),
+  };
+}
+
+/** The Monday (UTC) of the ISO week `date` (YYYY-MM-DD) falls in. */
+function weekStart(date: string): string {
+  const d = new Date(`${date}T00:00:00Z`);
+  const day = d.getUTCDay(); // 0 = Sunday .. 6 = Saturday
+  const diffToMonday = day === 0 ? 6 : day - 1;
+  d.setUTCDate(d.getUTCDate() - diffToMonday);
+  return d.toISOString().slice(0, 10);
+}
+
+/** Activity counts for the last `weeks` ISO weeks (Monday start), oldest first, zero-filled. */
+function buildWeeklyActivity(
+  activities: ActivityForStats[],
+  today: string,
+  weeks: number
+): { weekStart: string; count: number }[] {
+  const buckets = new Map<string, number>();
+  const order: string[] = [];
+  let cursor = weekStart(today);
+  for (let i = 0; i < weeks; i++) {
+    order.unshift(cursor);
+    buckets.set(cursor, 0);
+    const d = new Date(`${cursor}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - 7);
+    cursor = d.toISOString().slice(0, 10);
+  }
+
+  for (const activity of activities) {
+    const ws = weekStart(activity.startDate.slice(0, 10));
+    if (buckets.has(ws)) {
+      buckets.set(ws, (buckets.get(ws) ?? 0) + 1);
+    }
+  }
+
+  return order.map((ws) => ({ weekStart: ws, count: buckets.get(ws) ?? 0 }));
+}
+
+/** Activity counts per weekday, index 0 = Sunday .. 6 = Saturday. */
+function buildActivityByWeekday(activities: ActivityForStats[]): number[] {
+  const counts = [0, 0, 0, 0, 0, 0, 0];
+  for (const activity of activities) {
+    const day = new Date(`${activity.startDate.slice(0, 10)}T00:00:00Z`).getUTCDay();
+    counts[day]++;
+  }
+  return counts;
 }

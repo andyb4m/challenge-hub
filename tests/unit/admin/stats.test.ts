@@ -159,4 +159,71 @@ describe("buildAdminDashboard", () => {
     const { userSummaries } = buildAdminDashboard(users, [], activitiesByChallenge, today);
     expect(userSummaries.map((u) => u.uid)).toEqual(["recent", "old", "never"]);
   });
+
+  it("computes a new-users trend against the previous 7-day window", () => {
+    const users = [
+      user({ uid: "a", createdAt: "2026-09-15T00:00:00.000Z" }), // 3 days ago -> current
+      user({ uid: "b", createdAt: "2026-09-05T00:00:00.000Z" }), // 13 days ago -> previous
+      user({ uid: "c", createdAt: "2026-08-01T00:00:00.000Z" }), // outside both windows
+    ];
+    const { stats } = buildAdminDashboard(users, [], new Map(), today);
+    expect(stats.newUsersTrend).toEqual({ current: 1, previous: 1, deltaPct: 0 });
+  });
+
+  it("returns a null deltaPct when there's no previous-period baseline", () => {
+    const users = [user({ uid: "a", createdAt: "2026-09-17T00:00:00.000Z" })];
+    const { stats } = buildAdminDashboard(users, [], new Map(), today);
+    expect(stats.newUsersTrend).toEqual({ current: 1, previous: 0, deltaPct: null });
+  });
+
+  it("computes an activities trend against the previous 7-day window", () => {
+    const activitiesByChallenge = new Map([
+      [
+        "c1",
+        [
+          { uid: "a", source: "manual" as const, startDate: "2026-09-16T00:00:00.000Z" }, // 2 days ago
+          { uid: "a", source: "manual" as const, startDate: "2026-09-05T00:00:00.000Z" }, // 13 days ago
+        ],
+      ],
+    ]);
+    const { stats } = buildAdminDashboard([], [], activitiesByChallenge, today);
+    expect(stats.activitiesTrend).toEqual({ current: 1, previous: 1, deltaPct: 0 });
+  });
+
+  it("returns 8 zero-filled weeks in ascending order when there's no activity", () => {
+    const { stats } = buildAdminDashboard([], [], new Map(), today);
+    expect(stats.weeklyActivity).toHaveLength(8);
+    expect(stats.weeklyActivity.every((w) => w.count === 0)).toBe(true);
+    const starts = stats.weeklyActivity.map((w) => w.weekStart);
+    expect([...starts].sort()).toEqual(starts);
+  });
+
+  it("buckets an activity into the Monday-start week it falls in", () => {
+    const activitiesByChallenge = new Map([
+      [
+        "c1",
+        [{ uid: "a", source: "manual" as const, startDate: "2026-09-16T00:00:00.000Z" }],
+      ],
+    ]);
+    const { stats } = buildAdminDashboard([], [], activitiesByChallenge, today);
+    const nonZero = stats.weeklyActivity.filter((w) => w.count > 0);
+    expect(nonZero).toHaveLength(1);
+    expect(nonZero[0].count).toBe(1);
+  });
+
+  it("returns 7 zero weekday counts when there's no activity", () => {
+    const { stats } = buildAdminDashboard([], [], new Map(), today);
+    expect(stats.activityByWeekday).toEqual([0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it("buckets an activity's date into its weekday (UTC)", () => {
+    const startDate = "2026-09-16T00:00:00.000Z";
+    const expectedDay = new Date(startDate).getUTCDay();
+    const activitiesByChallenge = new Map([
+      ["c1", [{ uid: "a", source: "manual" as const, startDate }]],
+    ]);
+    const { stats } = buildAdminDashboard([], [], activitiesByChallenge, today);
+    expect(stats.activityByWeekday[expectedDay]).toBe(1);
+    expect(stats.activityByWeekday.reduce((a, b) => a + b, 0)).toBe(1);
+  });
 });

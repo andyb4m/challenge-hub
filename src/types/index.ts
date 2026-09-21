@@ -17,4 +17,4 @@ export type {
   StravaWebhookEvent,
   ZoneActivityKind,
 } from "./activity";
-export type { AdminStats, AdminUserSummary } from "./admin";
+export type { AdminStats, AdminTrend, AdminUserSummary } from "./admin";
