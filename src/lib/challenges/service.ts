@@ -310,3 +310,22 @@ export async function fetchMyRecentActivities(
     .sort((a, b) => (a.startDate < b.startDate ? 1 : -1))
     .slice(0, limitCount);
 }
+
+/**
+ * Creator-only: permanently deletes a challenge and every member's data in
+ * it. Goes through /api/challenges/[id] (Admin SDK) rather than a client
+ * batch, since removing this challengeId from other members' own user docs
+ * is a cross-user write the client can't make under the Firestore rules.
+ */
+export async function deleteChallenge(
+  challengeId: string,
+  idToken: string
+): Promise<void> {
+  const res = await fetch(`/api/challenges/${challengeId}`, {
+    method: "DELETE",
+    headers: { Authorization: `Bearer ${idToken}` },
+  });
+  if (!res.ok) {
+    throw new Error("Failed to delete challenge");
+  }
+}
