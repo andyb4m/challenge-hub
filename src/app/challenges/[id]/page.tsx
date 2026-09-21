@@ -27,6 +27,7 @@ import { VarietyCollection } from "@/components/challenges/variety-collection";
 import { VarietyManageCard } from "@/components/challenges/variety-manage-card";
 import { ZoneManageCard } from "@/components/challenges/zone-manage-card";
 import { InviteLinkButton } from "@/components/challenges/invite-link-button";
+import { DeleteChallengeCard } from "@/components/challenges/delete-challenge-card";
 
 function ChallengeDetail({ challengeId }: { challengeId: string }) {
   const { user, profile } = useAuth();
@@ -141,6 +142,10 @@ function ChallengeDetail({ challengeId }: { challengeId: string }) {
         members={members}
         currentUid={user.uid}
       />
+
+      {challenge.createdBy === user.uid && (
+        <DeleteChallengeCard challengeId={challenge.id} />
+      )}
     </main>
   );
 }
