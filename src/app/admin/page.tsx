@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { RequireAuth } from "@/components/auth/require-auth";
 import { useAuth } from "@/lib/auth/auth-context";
 import { AdminStatsView } from "@/components/admin/admin-stats";
+import { AdminTrendCards } from "@/components/admin/admin-trend-cards";
+import { AdminWeeklyChart } from "@/components/admin/admin-weekly-chart";
+import { AdminWeekdayHeatmap } from "@/components/admin/admin-weekday-heatmap";
+import { AdminTopUsers } from "@/components/admin/admin-top-users";
 import { AdminUserList } from "@/components/admin/admin-user-list";
 import { AdminDashboardSkeleton } from "@/components/admin/admin-dashboard-skeleton";
 import type { AdminStats, AdminUserSummary } from "@/types";
@@ -73,6 +77,15 @@ function AdminContent() {
 
   return (
     <div className="flex flex-col gap-6">
+      <AdminTrendCards
+        newUsersTrend={state.stats.newUsersTrend}
+        activitiesTrend={state.stats.activitiesTrend}
+      />
+      <AdminWeeklyChart data={state.stats.weeklyActivity} />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <AdminWeekdayHeatmap counts={state.stats.activityByWeekday} />
+        <AdminTopUsers users={state.users} />
+      </div>
       <AdminStatsView stats={state.stats} />
       <div className="flex flex-col gap-2">
         <h2 className="text-xl font-bold text-foreground">Users</h2>
