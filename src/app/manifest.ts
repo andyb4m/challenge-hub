@@ -24,7 +24,11 @@ export default function manifest(): MetadataRoute.Manifest {
         purpose: "any",
       },
       {
-        src: "/icons/icon-512.png",
+        // Full-bleed (no transparent margin) — Android crops maskable icons
+        // to its own shape, so unlike the "any" icons above, this one can't
+        // have any transparency near the edges or the crop reveals a white
+        // default background through it.
+        src: "/icons/icon-512-maskable.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",
