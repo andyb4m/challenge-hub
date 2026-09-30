@@ -11,6 +11,7 @@ import { firstError } from "@/lib/auth/validation";
 import { localToday } from "@/lib/challenges/scoring";
 import {
   DEFAULT_ZONE_CONFIG,
+  othersUsedInDay,
   recoveryUsedInWeek,
   zoneActivityPoints,
   type OthersTier,
@@ -91,6 +92,10 @@ export function ZoneLogForm({
       setError(
         "Recovery already logged this week — max one per calendar week. 🧘"
       );
+      return;
+    }
+    if (input.kind === "others" && othersUsedInDay(activities, uid, input.date)) {
+      setError("Others already logged that day — max one per calendar day. 🏋️");
       return;
     }
 

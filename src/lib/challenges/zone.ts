@@ -106,6 +106,21 @@ export function recoveryUsedInWeek(
   });
 }
 
+/**
+ * Daily "others" limit: max one per calendar day, same pattern as
+ * recoveryUsedInWeek above.
+ */
+export function othersUsedInDay(
+  activities: { uid: string; zoneKind?: string | null; startDate: string }[],
+  uid: string,
+  date: string // YYYY-MM-DD of the entry being added
+): boolean {
+  return activities.some((a) => {
+    if (a.uid !== uid || a.zoneKind !== "others") return false;
+    return a.startDate.slice(0, 10) === date;
+  });
+}
+
 /** [Monday, Sunday] of the calendar week containing the given date. */
 export function calendarWeekOf(date: string): [string, string] {
   const d = new Date(`${date}T12:00:00Z`);
