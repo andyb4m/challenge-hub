@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import type { Activity, Challenge, ZoneActivityKind } from "@/types";
 import { logZoneActivity } from "@/lib/challenges/service";
 import {
@@ -44,6 +44,12 @@ function zoneTimeToMinutes(t: ZoneTime): number {
   return (Number(t.min) || 0) + (Number(t.sec) || 0) / 60;
 }
 
+// Tab order for auto-advance: min -> sec -> next zone's min -> ...
+const FIELD_ORDER = ZONE_FIELDS.flatMap((zone) => [
+  `${zone}-min`,
+  `${zone}-sec`,
+]);
+
 export function ZoneLogForm({
   challenge,
   uid,
@@ -61,6 +67,16 @@ export function ZoneLogForm({
   const [tier, setTier] = useState<OthersTier>("30");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const fieldRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // Auto-advances to the next field once this one has 2 digits — lets
+  // someone type the whole zone-training section without touching the
+  // screen between fields.
+  function focusNextAfter(fieldId: string, digits: string) {
+    if (digits.length < 2) return;
+    const next = FIELD_ORDER[FIELD_ORDER.indexOf(fieldId) + 1];
+    if (next) fieldRefs.current[next]?.focus();
+  }
 
   function buildInput(): ZoneActivityInput & { date: string } {
     if (kind === "zone-training") {
@@ -181,6 +197,9 @@ export function ZoneLogForm({
                   <div className="flex items-center gap-1">
                     <Input
                       id={`zone-${zone}-min`}
+                      ref={(el) => {
+                        fieldRefs.current[`${zone}-min`] = el;
+                      }}
                       type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"
@@ -188,18 +207,20 @@ export function ZoneLogForm({
                       aria-label={`${zone} minutes`}
                       className="w-full px-2 text-center"
                       value={zones[zone].min}
-                      onChange={(e) =>
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/[^0-9]/g, "").slice(0, 3);
                         setZones({
                           ...zones,
-                          [zone]: {
-                            ...zones[zone],
-                            min: e.target.value.replace(/[^0-9]/g, "").slice(0, 3),
-                          },
-                        })
-                      }
+                          [zone]: { ...zones[zone], min: digits },
+                        });
+                        focusNextAfter(`${zone}-min`, digits);
+                      }}
                     />
                     <span className="text-muted">:</span>
                     <Input
+                      ref={(el) => {
+                        fieldRefs.current[`${zone}-sec`] = el;
+                      }}
                       type="text"
                       inputMode="numeric"
                       pattern="[0-9]*"
@@ -211,6 +232,7 @@ export function ZoneLogForm({
                         const digits = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
                         const sec = digits === "" ? "" : String(Math.min(Number(digits), 59));
                         setZones({ ...zones, [zone]: { ...zones[zone], sec } });
+                        focusNextAfter(`${zone}-sec`, digits);
                       }}
                     />
                   </div>
