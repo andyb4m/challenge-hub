@@ -167,13 +167,20 @@ export function ZoneLogForm({
                   </Label>
                   <Input
                     id={`zone-${zone}`}
-                    type="number"
-                    min="0"
-                    step="1"
-                    placeholder="0"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    placeholder="e.g. 30"
                     value={zones[zone]}
                     onChange={(e) =>
-                      setZones({ ...zones, [zone]: e.target.value })
+                      setZones({
+                        ...zones,
+                        // Whole minutes only — a decimal here reads as a
+                        // fraction of a minute (22.22 = 22m 13s), not a
+                        // stopwatch mm:ss, which was confusing enough in
+                        // practice to just not allow.
+                        [zone]: e.target.value.replace(/[^0-9]/g, ""),
+                      })
                     }
                   />
                   <span className="text-xs text-faint">
