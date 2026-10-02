@@ -11,6 +11,7 @@ import { firstError } from "@/lib/auth/validation";
 import { localToday } from "@/lib/challenges/scoring";
 import {
   DEFAULT_ZONE_CONFIG,
+  othersUsedInDay,
   recoveryUsedInWeek,
   zoneActivityPoints,
   type OthersTier,
@@ -30,6 +31,19 @@ const KIND_PILLS: { value: ZoneActivityKind; emoji: string; label: string }[] = 
 
 const ZONE_FIELDS = ["z2", "z3", "z4", "z5"] as const;
 
+type ZoneTime = { min: string; sec: string };
+const EMPTY_ZONE_TIMES: Record<(typeof ZONE_FIELDS)[number], ZoneTime> = {
+  z2: { min: "", sec: "" },
+  z3: { min: "", sec: "" },
+  z4: { min: "", sec: "" },
+  z5: { min: "", sec: "" },
+};
+
+/** Decimal minutes from a {min, sec} pair, e.g. 22 min 30 sec -> 22.5. */
+function zoneTimeToMinutes(t: ZoneTime): number {
+  return (Number(t.min) || 0) + (Number(t.sec) || 0) / 60;
+}
+
 export function ZoneLogForm({
   challenge,
   uid,
@@ -43,7 +57,7 @@ export function ZoneLogForm({
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<ZoneActivityKind>("zone-training");
   const [date, setDate] = useState(localToday());
-  const [zones, setZones] = useState({ z2: "", z3: "", z4: "", z5: "" });
+  const [zones, setZones] = useState(EMPTY_ZONE_TIMES);
   const [tier, setTier] = useState<OthersTier>("30");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -54,10 +68,10 @@ export function ZoneLogForm({
         kind,
         date,
         zones: {
-          z2: Number(zones.z2) || 0,
-          z3: Number(zones.z3) || 0,
-          z4: Number(zones.z4) || 0,
-          z5: Number(zones.z5) || 0,
+          z2: zoneTimeToMinutes(zones.z2),
+          z3: zoneTimeToMinutes(zones.z3),
+          z4: zoneTimeToMinutes(zones.z4),
+          z5: zoneTimeToMinutes(zones.z5),
         },
       };
     }
@@ -93,11 +107,15 @@ export function ZoneLogForm({
       );
       return;
     }
+    if (input.kind === "others" && othersUsedInDay(activities, uid, input.date)) {
+      setError("Others already logged that day — max one per calendar day. 🏋️");
+      return;
+    }
 
     setSubmitting(true);
     try {
       await logZoneActivity(input, challenge, uid);
-      setZones({ z2: "", z3: "", z4: "", z5: "" });
+      setZones(EMPTY_ZONE_TIMES);
       setOpen(false);
     } catch {
       setError("Could not save the activity. Please try again.");
@@ -157,20 +175,45 @@ export function ZoneLogForm({
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {ZONE_FIELDS.map((zone) => (
                 <div key={zone} className="flex flex-col gap-1.5">
-                  <Label htmlFor={`zone-${zone}`} className="uppercase">
-                    {zone} <span className="normal-case">min</span>
+                  <Label htmlFor={`zone-${zone}-min`} className="uppercase">
+                    {zone} <span className="normal-case">min:sec</span>
                   </Label>
-                  <Input
-                    id={`zone-${zone}`}
-                    type="number"
-                    min="0"
-                    step="1"
-                    placeholder="0"
-                    value={zones[zone]}
-                    onChange={(e) =>
-                      setZones({ ...zones, [zone]: e.target.value })
-                    }
-                  />
+                  <div className="flex items-center gap-1">
+                    <Input
+                      id={`zone-${zone}-min`}
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      placeholder="mm"
+                      aria-label={`${zone} minutes`}
+                      className="w-full px-2 text-center"
+                      value={zones[zone].min}
+                      onChange={(e) =>
+                        setZones({
+                          ...zones,
+                          [zone]: {
+                            ...zones[zone],
+                            min: e.target.value.replace(/[^0-9]/g, "").slice(0, 3),
+                          },
+                        })
+                      }
+                    />
+                    <span className="text-muted">:</span>
+                    <Input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      placeholder="ss"
+                      aria-label={`${zone} seconds`}
+                      className="w-full px-2 text-center"
+                      value={zones[zone].sec}
+                      onChange={(e) => {
+                        const digits = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
+                        const sec = digits === "" ? "" : String(Math.min(Number(digits), 59));
+                        setZones({ ...zones, [zone]: { ...zones[zone], sec } });
+                      }}
+                    />
+                  </div>
                   <span className="text-xs text-faint">
                     ×{config.multipliers[zone]} pts/min
                   </span>

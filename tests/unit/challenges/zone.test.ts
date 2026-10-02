@@ -5,6 +5,7 @@ import {
   effectiveZonePoints,
   hasZoneBonus,
   lowIntensityRatio,
+  othersUsedInDay,
   recoveryUsedInWeek,
   zoneActivityPoints,
 } from "@/lib/challenges/zone";
@@ -124,5 +125,30 @@ describe("recoveryUsedInWeek", () => {
   it("ignores non-recovery activities", () => {
     const onlyTraining = [activities[2]];
     expect(recoveryUsedInWeek(onlyTraining, "a", "2026-07-02")).toBe(false);
+  });
+});
+
+describe("othersUsedInDay", () => {
+  const activities = [
+    { uid: "a", zoneKind: "others", startDate: "2026-07-02T08:00:00.000Z" },
+    { uid: "b", zoneKind: "others", startDate: "2026-07-02T09:00:00.000Z" },
+    { uid: "a", zoneKind: "zone-training", startDate: "2026-07-02T18:00:00.000Z" },
+  ];
+
+  it("blocks a second others entry the same calendar day", () => {
+    expect(othersUsedInDay(activities, "a", "2026-07-02")).toBe(true);
+  });
+
+  it("allows others on a different day", () => {
+    expect(othersUsedInDay(activities, "a", "2026-07-03")).toBe(false);
+  });
+
+  it("only counts the member's own others entries", () => {
+    expect(othersUsedInDay(activities, "c", "2026-07-02")).toBe(false);
+  });
+
+  it("ignores non-others activities", () => {
+    const onlyTraining = [activities[2]];
+    expect(othersUsedInDay(onlyTraining, "a", "2026-07-02")).toBe(false);
   });
 });
