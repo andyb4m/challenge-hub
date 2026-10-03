@@ -95,6 +95,13 @@ export function Leaderboard({
                     >
                       {member.displayName}
                       {isMe && " (you)"}
+                      {scoring === "zone" && (
+                        <span className="ml-1.5 font-normal text-faint">
+                          ·{" "}
+                          {member.activityCount}{" "}
+                          {member.activityCount === 1 ? "activity" : "activities"}
+                        </span>
+                      )}
                       {bonus && (
                         <span
                           className="ml-1.5 rounded-full bg-warning/10 px-1.5 py-0.5 text-xs font-semibold text-warning"
@@ -121,10 +128,6 @@ export function Leaderboard({
                   </div>
                   {scoring === "zone" && (
                     <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-faint">
-                      <span>
-                        {member.activityCount}{" "}
-                        {member.activityCount === 1 ? "activity" : "activities"}
-                      </span>
                       {ZONE_KEYS.map((zone) => (
                         <span key={zone} className="uppercase">
                           {zone} {Math.round(member.zoneMinutes?.[zone] ?? 0)}m
