@@ -129,8 +129,8 @@ export function Leaderboard({
                   {scoring === "zone" && (
                     <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-faint">
                       {ZONE_KEYS.map((zone) => (
-                        <span key={zone} className="uppercase">
-                          {zone} {Math.round(member.zoneMinutes?.[zone] ?? 0)}m
+                        <span key={zone}>
+                          {zone}: {Math.round(member.zoneMinutes?.[zone] ?? 0)}m
                         </span>
                       ))}
                     </div>
