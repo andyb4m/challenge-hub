@@ -18,20 +18,18 @@ function formatMinutes(seconds: number): string {
     : `${minutes}m`;
 }
 
-function formatActivityStats(activity: Activity): string {
-  // Zone entries: show the points they earned (plus zone breakdown)
+/** The metrics line under the name/date — points render separately (bold), so they're excluded here. */
+function formatActivityMetrics(activity: Activity): string | null {
   if (activity.zoneKind) {
-    const parts: string[] = [];
     if (activity.zones) {
       const zoneBits = (["z2", "z3", "z4", "z5"] as const)
         .filter((z) => activity.zones![z] > 0)
-        .map((z) => `${z.toUpperCase()} ${Math.round(activity.zones![z])}m`);
-      if (zoneBits.length > 0) parts.push(zoneBits.join(" "));
+        .map((z) => `${z}: ${Math.round(activity.zones![z])}m`);
+      if (zoneBits.length > 0) return zoneBits.join(" ");
     } else if (activity.movingTime > 0) {
-      parts.push(formatMinutes(activity.movingTime));
+      return formatMinutes(activity.movingTime);
     }
-    parts.push(`${(activity.points ?? 0).toLocaleString()} pts`);
-    return parts.join(" · ");
+    return null;
   }
 
   // Variety entries: the name already carries the kind; just say it counts
@@ -45,6 +43,10 @@ function formatActivityStats(activity: Activity): string {
   }
   parts.push(formatMinutes(activity.movingTime));
   return parts.join(" · ");
+}
+
+function activityPoints(activity: Activity): number | null {
+  return activity.zoneKind ? (activity.points ?? 0) : null;
 }
 
 export function ActivityFeed({
@@ -80,39 +82,51 @@ export function ActivityFeed({
           </p>
         ) : (
           <ul className="flex flex-col gap-3">
-            {activities.map((activity) => (
+            {activities.map((activity) => {
+              const points = activityPoints(activity);
+              const metrics = formatActivityMetrics(activity);
+              return (
               <li
                 key={activity.id}
                 className="flex items-center justify-between gap-3 border-b border-line/60 pb-3 last:border-b-0 last:pb-0"
               >
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {activity.source === "strava" && activity.stravaActivityId ? (
-                        <a
-                          href={`https://www.strava.com/activities/${activity.stravaActivityId}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="hover:underline"
-                          title="View on Strava"
-                        >
-                          {activity.name}
-                        </a>
-                      ) : (
-                        activity.name
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {activity.source === "strava" && activity.stravaActivityId ? (
+                          <a
+                            href={`https://www.strava.com/activities/${activity.stravaActivityId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:underline"
+                            title="View on Strava"
+                          >
+                            {activity.name}
+                          </a>
+                        ) : (
+                          activity.name
+                        )}
+                      </p>
+                      {activity.source === "strava" && (
+                        <span className="shrink-0 rounded-full bg-[#FC4C02]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#FC4C02]">
+                          Strava
+                        </span>
                       )}
-                    </p>
-                    {activity.source === "strava" && (
-                      <span className="shrink-0 rounded-full bg-[#FC4C02]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#FC4C02]">
-                        Strava
+                    </div>
+                    {points !== null && (
+                      <span className="shrink-0 whitespace-nowrap text-sm font-bold tabular-nums text-foreground">
+                        {points.toLocaleString()} pts
                       </span>
                     )}
                   </div>
                   <p className="text-xs text-muted">
                     {nameByUid.get(activity.uid) ?? "Former member"} ·{" "}
-                    {activity.startDate.slice(0, 10)} ·{" "}
-                    {formatActivityStats(activity)}
+                    {activity.startDate.slice(0, 10)}
                   </p>
+                  {metrics && (
+                    <p className="mt-0.5 text-xs text-faint">{metrics}</p>
+                  )}
                 </div>
                 {activity.source === "manual" &&
                   activity.uid === currentUid && (
@@ -127,7 +141,8 @@ export function ActivityFeed({
                     </Button>
                   )}
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </CardContent>
