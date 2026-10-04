@@ -17,6 +17,7 @@ import {
   fetchMyRecentActivities,
   type RecentActivity,
 } from "@/lib/challenges/service";
+import { sortByRecency } from "@/lib/challenges/scoring";
 import type { Activity, Challenge, ChallengeMember } from "@/types";
 
 /** The signed-in user's challenges; refetches when their membership changes. */
@@ -79,7 +80,11 @@ export function useActivities(challengeId: string) {
       ),
       (snap) =>
         setActivities(
-          snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Activity)
+          // Client-side tie-break (not a second orderBy()) to avoid needing
+          // a new composite index — see sortByRecency's doc comment.
+          sortByRecency(
+            snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Activity)
+          )
         )
     );
   }, [challengeId]);
