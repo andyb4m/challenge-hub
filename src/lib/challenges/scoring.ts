@@ -243,3 +243,20 @@ export function groupActivitiesByDate<T extends { startDate: string }>(
   }
   return groups;
 }
+
+/**
+ * Sorts activities newest-first: by startDate, then syncedAt (the real log
+ * timestamp) to break ties. Manual entries are date-only (startDate pinned
+ * to noon UTC on the chosen day — see buildManualActivity), so same-day
+ * entries tie on startDate alone and need syncedAt to order correctly.
+ */
+export function sortByRecency<T extends { startDate: string; syncedAt: string }>(
+  activities: T[]
+): T[] {
+  return [...activities].sort((a, b) => {
+    if (a.startDate !== b.startDate) {
+      return a.startDate < b.startDate ? 1 : -1;
+    }
+    return a.syncedAt < b.syncedAt ? 1 : -1;
+  });
+}

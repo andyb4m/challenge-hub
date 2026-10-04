@@ -4,6 +4,7 @@ import { COLLECTIONS } from "@/lib/firebase/collections";
 import { isAdminEmail } from "@/lib/admin/access";
 import type { Activity, Challenge, User } from "@/types";
 import type { RecentActivity } from "@/lib/challenges/service";
+import { sortByRecency } from "@/lib/challenges/scoring";
 
 /** Admin-only: one user's profile + their full activity history across every challenge. */
 export async function GET(
@@ -56,6 +57,7 @@ export async function GET(
           challengeName: challenge.name,
           name: activity.name,
           startDate: activity.startDate,
+          syncedAt: activity.syncedAt,
           source: activity.source,
           stravaActivityId: activity.stravaActivityId,
         } satisfies RecentActivity;
@@ -63,9 +65,7 @@ export async function GET(
     })
   );
 
-  const activities = perChallengeActivities
-    .flat()
-    .sort((a, b) => (a.startDate < b.startDate ? 1 : -1));
+  const activities = sortByRecency(perChallengeActivities.flat());
 
   return NextResponse.json({
     user: {

@@ -24,6 +24,7 @@ import type {
   ZoneConfig,
 } from "@/types";
 import { generateInviteToken } from "@/lib/challenges/invite";
+import { sortByRecency } from "@/lib/challenges/scoring";
 import {
   buildManualActivity,
   buildNewChallenge,
@@ -270,6 +271,8 @@ export interface RecentActivity {
   challengeName: string;
   name: string;
   startDate: string;
+  /** Real log timestamp — used to break startDate ties (see useActivities). */
+  syncedAt: string;
   source: Activity["source"];
   stravaActivityId: number | null;
 }
@@ -306,6 +309,7 @@ export async function fetchMyRecentActivities(
             challengeName: challenge.name,
             name: activity.name,
             startDate: activity.startDate,
+            syncedAt: activity.syncedAt,
             source: activity.source,
             stravaActivityId: activity.stravaActivityId,
           };
@@ -313,10 +317,7 @@ export async function fetchMyRecentActivities(
     })
   );
 
-  return perChallenge
-    .flat()
-    .sort((a, b) => (a.startDate < b.startDate ? 1 : -1))
-    .slice(0, limitCount);
+  return sortByRecency(perChallenge.flat()).slice(0, limitCount);
 }
 
 /**

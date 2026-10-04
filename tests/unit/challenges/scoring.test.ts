@@ -7,6 +7,7 @@ import {
   formatTotal,
   goalProgress,
   groupActivitiesByDate,
+  sortByRecency,
   memberProgress,
   memberScore,
   memberTotalInUnit,
@@ -278,5 +279,40 @@ describe("groupActivitiesByDate", () => {
       activity("c", "2026-09-15T09:00:00.000Z"),
     ]);
     expect(groups.map((g) => g.date)).toEqual(["2026-09-15", "2026-09-14", "2026-09-15"]);
+  });
+});
+
+describe("sortByRecency", () => {
+  function activity(id: string, startDate: string, syncedAt: string) {
+    return { id, startDate, syncedAt };
+  }
+
+  it("sorts by startDate, newest first", () => {
+    const sorted = sortByRecency([
+      activity("old", "2026-09-10T12:00:00.000Z", "2026-09-10T08:00:00.000Z"),
+      activity("new", "2026-09-15T12:00:00.000Z", "2026-09-15T08:00:00.000Z"),
+    ]);
+    expect(sorted.map((a) => a.id)).toEqual(["new", "old"]);
+  });
+
+  it("breaks a same-day startDate tie with syncedAt — the real root cause of the reported bug", () => {
+    // Two manual entries logged the same day both get startDate pinned to
+    // noon UTC (buildManualActivity) — identical startDate, so only
+    // syncedAt (the actual log time) can tell which was logged last.
+    const sorted = sortByRecency([
+      activity("logged-first", "2026-10-04T12:00:00.000Z", "2026-10-04T08:00:00.000Z"),
+      activity("logged-last", "2026-10-04T12:00:00.000Z", "2026-10-04T18:00:00.000Z"),
+    ]);
+    expect(sorted.map((a) => a.id)).toEqual(["logged-last", "logged-first"]);
+  });
+
+  it("does not mutate the input array", () => {
+    const input = [
+      activity("a", "2026-09-10T12:00:00.000Z", "2026-09-10T08:00:00.000Z"),
+      activity("b", "2026-09-15T12:00:00.000Z", "2026-09-15T08:00:00.000Z"),
+    ];
+    const original = [...input];
+    sortByRecency(input);
+    expect(input).toEqual(original);
   });
 });
