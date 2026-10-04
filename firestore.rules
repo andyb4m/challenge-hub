@@ -38,13 +38,18 @@ service cloud.firestore {
       match /activities/{activityId} {
         allow read: if request.auth != null && isChallengeMember(challengeId);
         // Strava activities are written only by the server (admin SDK via
-        // webhook). Clients may log/delete their own manual entries.
+        // webhook) — creates stay manual-only so a client can't fabricate a
+        // fake Strava-sourced entry. Deletes aren't source-restricted: a
+        // member may remove any of their own entries, Strava-synced
+        // included (self-service alternative to the reconnect-delete-
+        // disconnect dance via Strava's own UI). Doesn't touch Strava
+        // itself — see deleteActivity()'s doc comment for the resurrection
+        // caveat if the activity still exists there.
         allow create: if request.auth != null
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.source == 'manual';
         allow delete: if request.auth != null
-          && resource.data.uid == request.auth.uid
-          && resource.data.source == 'manual';
+          && resource.data.uid == request.auth.uid;
         allow update: if false;
       }
     }

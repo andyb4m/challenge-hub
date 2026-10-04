@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import type { Activity, ChallengeMember } from "@/types";
-import { deleteManualActivity } from "@/lib/challenges/service";
+import { deleteActivity } from "@/lib/challenges/service";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -64,7 +64,7 @@ export function ActivityFeed({
   async function handleDelete(activity: Activity) {
     setDeletingId(activity.id);
     try {
-      await deleteManualActivity(activity);
+      await deleteActivity(activity);
     } finally {
       setDeletingId(null);
     }
@@ -128,18 +128,17 @@ export function ActivityFeed({
                     <p className="mt-0.5 text-xs text-faint">{metrics}</p>
                   )}
                 </div>
-                {activity.source === "manual" &&
-                  activity.uid === currentUid && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="text-error hover:bg-error/10"
-                      onClick={() => handleDelete(activity)}
-                      disabled={deletingId === activity.id}
-                    >
-                      {deletingId === activity.id ? "Removing…" : "Remove"}
-                    </Button>
-                  )}
+                {activity.uid === currentUid && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-error hover:bg-error/10"
+                    onClick={() => handleDelete(activity)}
+                    disabled={deletingId === activity.id}
+                  >
+                    {deletingId === activity.id ? "Removing…" : "Remove"}
+                  </Button>
+                )}
               </li>
               );
             })}

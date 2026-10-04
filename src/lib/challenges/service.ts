@@ -212,10 +212,18 @@ export async function updateZoneConfig(
 }
 
 /**
- * Deletes any manual entry and reverses its contribution to the member's
- * totals (including per-kind counts and zone/point totals).
+ * Deletes an activity — manual or Strava-synced — and reverses its
+ * contribution to the member's totals (including per-kind counts and
+ * zone/point totals). Firestore rules only check ownership here, not
+ * source, so a Strava-synced entry can be removed the same way.
+ *
+ * Caveat for Strava-synced entries: this doesn't touch Strava itself. If
+ * the activity still exists there and a future webhook event touches it
+ * again (an edit, etc.), syncStravaActivity's self-healing logic will
+ * recreate it, since there's no tombstone tracking an intentional in-app
+ * delete. Delete it on Strava too if you want it gone for good.
  */
-export async function deleteManualActivity(activity: Activity): Promise<void> {
+export async function deleteActivity(activity: Activity): Promise<void> {
   const db = firestoreDb();
   const zones = activity.zones ?? { z2: 0, z3: 0, z4: 0, z5: 0 };
   const memberRef = doc(
