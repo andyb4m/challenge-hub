@@ -128,17 +128,21 @@ export function ActivityFeed({
                     <p className="mt-0.5 text-xs text-faint">{metrics}</p>
                   )}
                 </div>
-                {activity.uid === currentUid && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-error hover:bg-error/10"
-                    onClick={() => handleDelete(activity)}
-                    disabled={deletingId === activity.id}
-                  >
-                    {deletingId === activity.id ? "Removing…" : "Remove"}
-                  </Button>
-                )}
+                <div className="flex w-8 shrink-0 items-center justify-center">
+                  {activity.uid === currentUid && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 rounded-full text-error hover:bg-error/10"
+                      onClick={() => handleDelete(activity)}
+                      disabled={deletingId === activity.id}
+                      aria-label="Remove activity"
+                      title="Remove activity"
+                    >
+                      <TrashIcon className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
               </li>
               );
             })}
@@ -146,5 +150,25 @@ export function ActivityFeed({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function TrashIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M3 6h18" />
+      <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
   );
 }
