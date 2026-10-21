@@ -90,6 +90,11 @@ export function ProgressChart({ data }: { data: ZoneProgressChartData }) {
         <CardDescription>Cumulative points per player.</CardDescription>
       </CardHeader>
       <CardContent>
+        {visibleSeries.length === 0 && (
+          <p className="mb-2 text-sm text-muted">
+            All players are hidden — click a name below to show it again.
+          </p>
+        )}
         <svg
           viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
           className="w-full"

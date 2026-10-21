@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Activity, ChallengeMember } from "@/types";
 import { deleteActivity } from "@/lib/challenges/service";
 import { Button } from "@/components/ui/button";
@@ -82,6 +82,14 @@ export function ActivityFeed({
     if (activities.some((a) => a.distance > 0)) options.push("distance");
     return options;
   }, [activities]);
+
+  // Defensive: if the available options ever narrow out from under the
+  // current selection (e.g. this component were reused across challenge
+  // types without remounting), fall back to the one option that's always
+  // offered rather than silently sorting by a hidden key.
+  useEffect(() => {
+    if (!sortOptions.includes(sortBy)) setSortBy("date");
+  }, [sortOptions, sortBy]);
 
   const sorted = useMemo(() => {
     if (sortBy === "date") return activities; // already newest-first from the caller

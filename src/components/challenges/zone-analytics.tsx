@@ -68,7 +68,10 @@ export function ZoneAnalytics({
                       {inBand && " · bonus ⭐"}
                     </span>
                   </div>
-                  <div className="relative h-1.5 overflow-hidden rounded-full bg-background-secondary">
+                  <div
+                    className="relative h-1.5 overflow-hidden rounded-full bg-background-secondary"
+                    aria-hidden="true"
+                  >
                     <div
                       className="absolute inset-y-0 rounded-full bg-success/20"
                       style={{
