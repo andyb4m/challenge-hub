@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Activity, ChallengeMember } from "@/types";
 import { deleteActivity } from "@/lib/challenges/service";
 import { Button } from "@/components/ui/button";
-import { Select } from "@/components/ui/select";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 type SortKey = "date" | "points" | "distance";
 const SORT_LABELS: Record<SortKey, string> = {
@@ -73,8 +73,29 @@ export function ActivityFeed({
 }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>("date");
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const [mineOnly, setMineOnly] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
   const nameByUid = new Map(members.map((m) => [m.uid, m.displayName]));
+
+  useEffect(() => {
+    if (!sortMenuOpen) return;
+    function handlePointerDown(event: PointerEvent) {
+      if (!sortMenuRef.current?.contains(event.target as Node)) {
+        setSortMenuOpen(false);
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") setSortMenuOpen(false);
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [sortMenuOpen]);
 
   // Only offer a sort option if it would actually distinguish entries —
   // e.g. "Points" is meaningless clutter on a goal challenge, where every
@@ -94,20 +115,27 @@ export function ActivityFeed({
     if (!sortOptions.includes(sortBy)) setSortBy("date");
   }, [sortOptions, sortBy]);
 
+  const hasOthersActivity = activities.some((a) => a.uid !== currentUid);
+
+  const filtered = useMemo(
+    () => (mineOnly ? activities.filter((a) => a.uid === currentUid) : activities),
+    [activities, mineOnly, currentUid]
+  );
+
   const sorted = useMemo(() => {
-    if (sortBy === "date") return activities; // already newest-first from the caller
+    if (sortBy === "date") return filtered; // already newest-first from the caller
     const withValue = (a: Activity) =>
       sortBy === "points" ? activityPoints(a) ?? 0 : a.distance;
-    return [...activities].sort((a, b) => withValue(b) - withValue(a));
-  }, [activities, sortBy]);
+    return [...filtered].sort((a, b) => withValue(b) - withValue(a));
+  }, [filtered, sortBy]);
 
-  // Re-paging on sort change (rather than keeping the scroll position) so
-  // "show more" always reveals the next slice of the *current* order —
-  // otherwise switching to "Points" after scrolling deep into "Date" would
-  // show an arbitrary, order-crossing slice.
+  // Re-paging on sort/filter change (rather than keeping the scroll
+  // position) so "show more" always reveals the next slice of the
+  // *current* view — otherwise switching sort or the "mine only" filter
+  // after scrolling deep in could show an arbitrary, order-crossing slice.
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
-  }, [sortBy]);
+  }, [sortBy, mineOnly]);
 
   const visible = sorted.slice(0, visibleCount);
   const remaining = sorted.length - visible.length;
@@ -125,19 +153,67 @@ export function ActivityFeed({
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle>Activities</CardTitle>
-        {activities.length > 0 && sortOptions.length > 1 && (
-          <Select
-            aria-label="Sort activities by"
-            className="h-8 w-auto px-2 py-0 text-xs"
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortKey)}
-          >
-            {sortOptions.map((key) => (
-              <option key={key} value={key}>
-                Sort: {SORT_LABELS[key]}
-              </option>
-            ))}
-          </Select>
+        {activities.length > 0 && (
+          <div className="flex items-center gap-1">
+            {hasOthersActivity && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-8 w-8 rounded-full",
+                  mineOnly && "bg-primary/10 text-primary-light"
+                )}
+                onClick={() => setMineOnly((v) => !v)}
+                aria-pressed={mineOnly}
+                aria-label={mineOnly ? "Showing only my activities" : "Show only my activities"}
+                title="Only my activities"
+              >
+                <PersonIcon className="h-4 w-4" />
+              </Button>
+            )}
+            {sortOptions.length > 1 && (
+              <div ref={sortMenuRef} className="relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-full"
+                  onClick={() => setSortMenuOpen((v) => !v)}
+                  aria-haspopup="menu"
+                  aria-expanded={sortMenuOpen}
+                  aria-label={`Sort by ${SORT_LABELS[sortBy]}`}
+                  title={`Sort by ${SORT_LABELS[sortBy]}`}
+                >
+                  <SortIcon className="h-4 w-4" />
+                </Button>
+                {sortMenuOpen && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 top-10 z-20 w-36 overflow-hidden rounded-xl border border-line bg-card shadow-card"
+                  >
+                    {sortOptions.map((key) => (
+                      <button
+                        key={key}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setSortBy(key);
+                          setSortMenuOpen(false);
+                        }}
+                        className={cn(
+                          "block w-full px-4 py-2.5 text-left text-sm hover:bg-white/5",
+                          key === sortBy
+                            ? "font-semibold text-foreground"
+                            : "text-muted hover:text-foreground"
+                        )}
+                      >
+                        {SORT_LABELS[key]}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </CardHeader>
       <CardContent>
@@ -225,6 +301,42 @@ export function ActivityFeed({
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function PersonIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4 20c0-3.5 3.5-6 8-6s8 2.5 8 6" />
+    </svg>
+  );
+}
+
+function SortIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={className}
+      aria-hidden="true"
+    >
+      <path d="M7 4v16M7 4l-3 3M7 4l3 3" />
+      <path d="M17 20V4M17 20l-3-3M17 20l3-3" />
+    </svg>
   );
 }
 

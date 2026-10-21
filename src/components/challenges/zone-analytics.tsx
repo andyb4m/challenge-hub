@@ -58,14 +58,11 @@ export function ZoneAnalytics({
                     </span>
                     <span
                       className={cn(
-                        "shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold",
-                        inBand
-                          ? "bg-success/10 text-success"
-                          : "bg-error/10 text-error"
+                        "shrink-0 text-xs font-semibold",
+                        inBand ? "text-success" : "text-error"
                       )}
                     >
                       {displayRatioPercent(ratio, config)}% low intensity
-                      {inBand && " · bonus ⭐"}
                     </span>
                   </div>
                   <div
