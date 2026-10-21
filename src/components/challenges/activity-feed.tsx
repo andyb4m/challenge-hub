@@ -58,6 +58,9 @@ function formatActivityMetrics(activity: Activity): string | null {
   return parts.join(" · ");
 }
 
+// null (not 0) for goal/variety activities, which have no points concept —
+// that's what makes sortOptions' "points !== null" check correctly hide the
+// "Sort by Points" option on those challenge types.
 function activityPoints(activity: Activity): number | null {
   return activity.zoneKind ? (activity.points ?? 0) : null;
 }

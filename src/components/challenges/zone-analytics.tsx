@@ -66,7 +66,7 @@ export function ZoneAnalytics({
                     </span>
                   </div>
                   <div
-                    className="relative h-1.5 overflow-hidden rounded-full bg-background-secondary"
+                    className="relative h-1.5 rounded-full bg-background-secondary"
                     aria-hidden="true"
                   >
                     <div
