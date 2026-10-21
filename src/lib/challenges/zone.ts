@@ -80,6 +80,21 @@ export function hasZoneBonus(
   return ratio !== null && ratio >= config.bonus.low && ratio <= config.bonus.high;
 }
 
+/**
+ * Ratio as a whole-number percent for display, rounded *away* from the
+ * bonus band when outside it (floor below `low`, ceil above `high`).
+ * Plain Math.round can land on the boundary value itself (e.g. 85.4% ->
+ * "85%"), showing a number that looks in-band right next to a red badge.
+ * Inside the band, ordinary rounding is fine — there's no contradiction
+ * to create.
+ */
+export function displayRatioPercent(ratio: number, config: ZoneConfig): number {
+  const pct = ratio * 100;
+  if (ratio < config.bonus.low) return Math.floor(pct);
+  if (ratio > config.bonus.high) return Math.ceil(pct);
+  return Math.round(pct);
+}
+
 /** Total points with the 80/20 bonus applied — what the leaderboard ranks by. */
 export function effectiveZonePoints(
   member: Pick<ChallengeMember, "totalPoints" | "zoneMinutes" | "recoveryCount">,

@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   calendarWeekOf,
   DEFAULT_ZONE_CONFIG,
+  displayRatioPercent,
   effectiveZonePoints,
   hasZoneBonus,
   lowIntensityRatio,
@@ -70,6 +71,33 @@ describe("80/20 bonus", () => {
     expect(hasZoneBonus(atLow, config)).toBe(true);
     const atHigh = { zoneMinutes: { z2: 85, z3: 0, z4: 15, z5: 0 }, recoveryCount: 0 };
     expect(hasZoneBonus(atHigh, config)).toBe(true);
+  });
+
+  describe("displayRatioPercent", () => {
+    it("rounds normally inside the band", () => {
+      expect(displayRatioPercent(0.754, config)).toBe(75);
+    });
+
+    it("rounds down (never up to the boundary) just below the band", () => {
+      // 69.6% would normally round to 70 — the same number as the lower
+      // bound — which would contradict a red (non-bonus) badge.
+      expect(displayRatioPercent(0.696, config)).toBe(69);
+    });
+
+    it("rounds up (never down to the boundary) just above the band", () => {
+      // 85.4% would normally round to 85 — the same number as the upper
+      // bound — which would contradict a red (non-bonus) badge.
+      expect(displayRatioPercent(0.854, config)).toBe(86);
+    });
+
+    it("never shows a boundary value next to a non-bonus badge", () => {
+      for (const ratio of [0.6, 0.65, 0.699, 0.86, 0.9, 0.999]) {
+        const pct = displayRatioPercent(ratio, config);
+        const bandLow = Math.round(config.bonus.low * 100);
+        const bandHigh = Math.round(config.bonus.high * 100);
+        expect(pct === bandLow || pct === bandHigh).toBe(false);
+      }
+    });
   });
 
   it("multiplies effective points by 1.15 when active", () => {

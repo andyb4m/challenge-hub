@@ -3,6 +3,7 @@
 import type { Challenge, ChallengeMember } from "@/types";
 import {
   DEFAULT_ZONE_CONFIG,
+  displayRatioPercent,
   hasZoneBonus,
   lowIntensityRatio,
 } from "@/lib/challenges/zone";
@@ -45,29 +46,44 @@ export function ZoneAnalytics({
             No zone training logged yet — ratios appear once someone starts.
           </p>
         ) : (
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-3">
             {withActivity.map((member) => {
               const ratio = lowIntensityRatio(member)!;
               const inBand = hasZoneBonus(member, config);
               return (
-                <li
-                  key={member.uid}
-                  className="flex items-center justify-between gap-3 text-sm"
-                >
-                  <span className="truncate text-muted">
-                    {member.displayName}
-                  </span>
-                  <span
-                    className={cn(
-                      "rounded-full px-2 py-0.5 text-xs font-semibold",
-                      inBand
-                        ? "bg-success/10 text-success"
-                        : "bg-error/10 text-error"
-                    )}
+                <li key={member.uid} className="flex flex-col gap-1.5 text-sm">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="truncate text-muted">
+                      {member.displayName}
+                    </span>
+                    <span
+                      className={cn(
+                        "shrink-0 text-xs font-semibold",
+                        inBand ? "text-success" : "text-error"
+                      )}
+                    >
+                      {displayRatioPercent(ratio, config)}% low intensity
+                    </span>
+                  </div>
+                  <div
+                    className="relative h-1.5 rounded-full bg-background-secondary"
+                    aria-hidden="true"
                   >
-                    {Math.round(ratio * 100)}% low intensity
-                    {inBand && " · bonus ⭐"}
-                  </span>
+                    <div
+                      className="absolute inset-y-0 rounded-full bg-success/20"
+                      style={{
+                        left: `${config.bonus.low * 100}%`,
+                        width: `${(config.bonus.high - config.bonus.low) * 100}%`,
+                      }}
+                    />
+                    <div
+                      className={cn(
+                        "absolute top-1/2 h-2.5 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full",
+                        inBand ? "bg-success" : "bg-error"
+                      )}
+                      style={{ left: `${ratio * 100}%` }}
+                    />
+                  </div>
                 </li>
               );
             })}
