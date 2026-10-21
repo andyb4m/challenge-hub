@@ -19,6 +19,8 @@ const SORT_LABELS: Record<SortKey, string> = {
   distance: "Distance",
 };
 
+const PAGE_SIZE = 10;
+
 function formatMinutes(seconds: number): string {
   const minutes = Math.round(seconds / 60);
   return minutes >= 60
@@ -71,6 +73,7 @@ export function ActivityFeed({
 }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<SortKey>("date");
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const nameByUid = new Map(members.map((m) => [m.uid, m.displayName]));
 
   // Only offer a sort option if it would actually distinguish entries —
@@ -97,6 +100,17 @@ export function ActivityFeed({
       sortBy === "points" ? activityPoints(a) ?? 0 : a.distance;
     return [...activities].sort((a, b) => withValue(b) - withValue(a));
   }, [activities, sortBy]);
+
+  // Re-paging on sort change (rather than keeping the scroll position) so
+  // "show more" always reveals the next slice of the *current* order —
+  // otherwise switching to "Points" after scrolling deep into "Date" would
+  // show an arbitrary, order-crossing slice.
+  useEffect(() => {
+    setVisibleCount(PAGE_SIZE);
+  }, [sortBy]);
+
+  const visible = sorted.slice(0, visibleCount);
+  const remaining = sorted.length - visible.length;
 
   async function handleDelete(activity: Activity) {
     setDeletingId(activity.id);
@@ -133,7 +147,7 @@ export function ActivityFeed({
           </p>
         ) : (
           <ul className="flex flex-col gap-3">
-            {sorted.map((activity) => {
+            {visible.map((activity) => {
               const points = activityPoints(activity);
               const metrics = formatActivityMetrics(activity);
               return (
@@ -198,6 +212,16 @@ export function ActivityFeed({
               );
             })}
           </ul>
+        )}
+        {remaining > 0 && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="mt-3 w-full"
+            onClick={() => setVisibleCount((n) => n + PAGE_SIZE)}
+          >
+            Show {Math.min(remaining, PAGE_SIZE)} more
+          </Button>
         )}
       </CardContent>
     </Card>
