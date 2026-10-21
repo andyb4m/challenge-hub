@@ -230,7 +230,12 @@ export function ZoneLogForm({
                       value={zones[zone].sec}
                       onChange={(e) => {
                         const digits = e.target.value.replace(/[^0-9]/g, "").slice(0, 2);
-                        const sec = digits === "" ? "" : String(Math.min(Number(digits), 59));
+                        // Only coerce when the typed value is actually out of
+                        // range — a plain Number→String round-trip here would
+                        // strip a leading zero the moment the second digit
+                        // lands (e.g. "05" -> "5"), right when auto-advance
+                        // also fires, making it maximally visible.
+                        const sec = Number(digits) > 59 ? "59" : digits;
                         setZones({ ...zones, [zone]: { ...zones[zone], sec } });
                         focusNextAfter(`${zone}-sec`, digits);
                       }}

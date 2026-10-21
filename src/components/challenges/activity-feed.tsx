@@ -1,15 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Activity, ChallengeMember } from "@/types";
 import { deleteActivity } from "@/lib/challenges/service";
 import { Button } from "@/components/ui/button";
+import { Select } from "@/components/ui/select";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+
+type SortKey = "date" | "points" | "distance";
+const SORT_LABELS: Record<SortKey, string> = {
+  date: "Date",
+  points: "Points",
+  distance: "Distance",
+};
 
 function formatMinutes(seconds: number): string {
   const minutes = Math.round(seconds / 60);
@@ -25,7 +33,10 @@ function formatActivityMetrics(activity: Activity): string | null {
       const zoneBits = (["z2", "z3", "z4", "z5"] as const)
         .filter((z) => activity.zones![z] > 0)
         .map((z) => `${z}: ${Math.round(activity.zones![z])}m`);
-      if (zoneBits.length > 0) return zoneBits.join(" ");
+      if (zoneBits.length > 0) {
+        // Total duration alongside the breakdown, not instead of it.
+        return [formatMinutes(activity.movingTime), ...zoneBits].join(" · ");
+      }
     } else if (activity.movingTime > 0) {
       return formatMinutes(activity.movingTime);
     }
@@ -59,7 +70,25 @@ export function ActivityFeed({
   currentUid: string;
 }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortKey>("date");
   const nameByUid = new Map(members.map((m) => [m.uid, m.displayName]));
+
+  // Only offer a sort option if it would actually distinguish entries —
+  // e.g. "Points" is meaningless clutter on a goal challenge, where every
+  // activity's points are null.
+  const sortOptions: SortKey[] = useMemo(() => {
+    const options: SortKey[] = ["date"];
+    if (activities.some((a) => activityPoints(a) !== null)) options.push("points");
+    if (activities.some((a) => a.distance > 0)) options.push("distance");
+    return options;
+  }, [activities]);
+
+  const sorted = useMemo(() => {
+    if (sortBy === "date") return activities; // already newest-first from the caller
+    const withValue = (a: Activity) =>
+      sortBy === "points" ? activityPoints(a) ?? 0 : a.distance;
+    return [...activities].sort((a, b) => withValue(b) - withValue(a));
+  }, [activities, sortBy]);
 
   async function handleDelete(activity: Activity) {
     setDeletingId(activity.id);
@@ -72,8 +101,22 @@ export function ActivityFeed({
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between gap-3">
         <CardTitle>Activities</CardTitle>
+        {activities.length > 0 && sortOptions.length > 1 && (
+          <Select
+            aria-label="Sort activities by"
+            className="h-8 w-auto px-2 py-0 text-xs"
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortKey)}
+          >
+            {sortOptions.map((key) => (
+              <option key={key} value={key}>
+                Sort: {SORT_LABELS[key]}
+              </option>
+            ))}
+          </Select>
+        )}
       </CardHeader>
       <CardContent>
         {activities.length === 0 ? (
@@ -82,7 +125,7 @@ export function ActivityFeed({
           </p>
         ) : (
           <ul className="flex flex-col gap-3">
-            {activities.map((activity) => {
+            {sorted.map((activity) => {
               const points = activityPoints(activity);
               const metrics = formatActivityMetrics(activity);
               return (
