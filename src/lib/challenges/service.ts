@@ -35,6 +35,7 @@ import {
 } from "@/lib/challenges/challenge-doc";
 import { challengeScoring } from "@/lib/challenges/scoring";
 import type { ZoneActivityInput } from "@/lib/challenges/zone";
+import type { ZoneScreenshotResult } from "@/lib/challenges/zone-screenshot";
 
 type MemberProfile = Pick<User, "uid" | "displayName" | "photoURL">;
 
@@ -337,4 +338,27 @@ export async function deleteChallenge(
   if (!res.ok) {
     throw new Error("Failed to delete challenge");
   }
+}
+
+/**
+ * Sends a fitness-tracker screenshot to the server for zone-minutes
+ * extraction. The file never touches Firestore/Storage — it's forwarded
+ * to Claude's vision API in memory and discarded.
+ */
+export async function parseZoneScreenshot(
+  file: File,
+  idToken: string
+): Promise<ZoneScreenshotResult> {
+  const formData = new FormData();
+  formData.append("image", file);
+
+  const res = await fetch("/api/zones/parse-screenshot", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${idToken}` },
+    body: formData,
+  });
+  if (!res.ok) {
+    throw new Error("Failed to parse screenshot");
+  }
+  return (await res.json()) as ZoneScreenshotResult;
 }
