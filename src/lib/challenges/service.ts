@@ -357,6 +357,9 @@ export async function parseZoneScreenshot(
     headers: { Authorization: `Bearer ${idToken}` },
     body: formData,
   });
+  if (res.status === 429) {
+    throw new Error("rate-limited");
+  }
   if (!res.ok) {
     throw new Error("Failed to parse screenshot");
   }

@@ -108,8 +108,12 @@ export function ZoneLogForm({
         return;
       }
       setZones(zoneMinutesToZoneTimes(result.zones));
-    } catch {
-      setError("Could not read that screenshot. Please try again or enter it manually.");
+    } catch (err) {
+      setError(
+        err instanceof Error && err.message === "rate-limited"
+          ? "You've hit today's scan limit — try again tomorrow, or enter it manually below."
+          : "Could not read that screenshot. Please try again or enter it manually."
+      );
     } finally {
       setScanning(false);
       if (screenshotInputRef.current) screenshotInputRef.current.value = "";
@@ -255,7 +259,8 @@ export function ZoneLogForm({
               />
               <p className="text-xs text-faint">
                 A Garmin, Polar or Strava zone summary — fills in the fields
-                below for you to check before saving.
+                below for you to check before saving. Sent to Anthropic for
+                one-time processing; never stored.
               </p>
             </div>
           )}

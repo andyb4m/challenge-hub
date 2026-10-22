@@ -1,6 +1,9 @@
 import { z } from "zod";
 import { anthropicClient } from "@/lib/anthropic/client";
+import { adminDb } from "@/lib/firebase/admin";
+import { COLLECTIONS } from "@/lib/firebase/collections";
 import type { ZoneMinutes } from "@/lib/challenges/zone";
+import type { User } from "@/types";
 
 export const ALLOWED_SCREENSHOT_TYPES = [
   "image/jpeg",
@@ -49,6 +52,30 @@ const toolResponseSchema = z.object({
 export interface ZoneScreenshotResult {
   found: boolean;
   zones: ZoneMinutes;
+}
+
+const DAILY_SCAN_LIMIT = 20;
+
+/**
+ * Defense-in-depth cost guard: registration is open (CLAUDE.md), so
+ * "any signed-in user" doesn't actually bound who can trigger this paid
+ * API call — the real ceiling is a spend limit set on the Anthropic key
+ * itself (console-side, not code). This just adds friction on top of
+ * that. A transaction, not a plain read-then-write, so two concurrent
+ * scans can't both read count 19 and both land on 20.
+ */
+export async function checkAndIncrementScanLimit(uid: string): Promise<boolean> {
+  const today = new Date().toISOString().slice(0, 10);
+  const userRef = adminDb().collection(COLLECTIONS.users).doc(uid);
+
+  return adminDb().runTransaction(async (tx) => {
+    const snap = await tx.get(userRef);
+    const current = (snap.data() as User | undefined)?.screenshotScans;
+    const count = current?.date === today ? current.count : 0;
+    if (count >= DAILY_SCAN_LIMIT) return false;
+    tx.set(userRef, { screenshotScans: { date: today, count: count + 1 } }, { merge: true });
+    return true;
+  });
 }
 
 /**

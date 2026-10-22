@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebase/admin";
 import {
+  checkAndIncrementScanLimit,
   isAllowedScreenshotType,
   MAX_SCREENSHOT_BYTES,
   parseZoneScreenshot,
@@ -10,9 +11,12 @@ import {
  * Parses a fitness-tracker screenshot into zone-training minutes via
  * Claude's vision API. Requires auth (any signed-in user — this has no
  * per-challenge data to authorize against, it's a stateless read) purely
- * to keep the API key from being abusable by anonymous traffic. The
- * image is held in memory for the single Anthropic call and never
- * written to Firestore, Storage, or a log.
+ * to keep the API key from being abusable by anonymous traffic. Since
+ * registration is open, "any signed-in user" doesn't bound this much on
+ * its own, hence the per-uid daily limit below — see
+ * checkAndIncrementScanLimit's doc comment. The image is held in memory
+ * for the single Anthropic call and never written to Firestore, Storage,
+ * or a log.
  */
 export async function POST(request: Request) {
   const authHeader = request.headers.get("authorization") ?? "";
@@ -20,8 +24,9 @@ export async function POST(request: Request) {
   if (!idToken) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   }
+  let uid: string;
   try {
-    await adminAuth().verifyIdToken(idToken);
+    ({ uid } = await adminAuth().verifyIdToken(idToken));
   } catch {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   }
@@ -42,6 +47,12 @@ export async function POST(request: Request) {
   }
   if (file.size > MAX_SCREENSHOT_BYTES) {
     return NextResponse.json({ error: "too-large" }, { status: 400 });
+  }
+
+  // Checked only once the upload itself is valid, so a mis-picked file
+  // doesn't cost the user one of their daily scans.
+  if (!(await checkAndIncrementScanLimit(uid))) {
+    return NextResponse.json({ error: "rate-limited" }, { status: 429 });
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
