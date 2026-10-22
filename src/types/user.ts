@@ -20,4 +20,12 @@ export interface User {
    * `?? []`.
    */
   challengeIds?: string[];
+  /**
+   * Daily counter for the zone-screenshot scan feature — a defense-in-
+   * depth cost guard, since registration is open and the scan calls a
+   * paid API (see checkAndIncrementScanLimit, zone-screenshot.ts). No
+   * separate deletion path needed: removed with the rest of the user
+   * doc on account deletion.
+   */
+  screenshotScans?: { date: string; count: number };
 }
