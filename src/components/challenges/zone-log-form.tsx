@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Activity, Challenge, ZoneActivityKind } from "@/types";
 import { logZoneActivity } from "@/lib/challenges/service";
 import {
@@ -68,14 +68,41 @@ export function ZoneLogForm({
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const fieldRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const pendingAdvance = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  // Auto-advances to the next field once this one has 2 digits — lets
-  // someone type the whole zone-training section without touching the
-  // screen between fields.
+  useEffect(() => {
+    const timers = pendingAdvance.current;
+    return () => {
+      Object.values(timers).forEach(clearTimeout);
+    };
+  }, []);
+
+  // Auto-advances to the next field once this one looks done — lets someone
+  // type the whole zone-training section without touching the screen
+  // between fields. Seconds always cap at 2 digits, so 2 digits there means
+  // done. Minutes allow a 3rd digit (100+ min zones are real — a long run's
+  // aerobic zone easily clears that), so 2 digits only *might* be done:
+  // wait briefly for a possible 3rd before advancing, canceling the wait if
+  // it arrives. Without this, typing "100" got cut to "10" the instant the
+  // 2nd digit landed, with no way to finish the number.
   function focusNextAfter(fieldId: string, digits: string) {
+    if (pendingAdvance.current[fieldId]) {
+      clearTimeout(pendingAdvance.current[fieldId]);
+      delete pendingAdvance.current[fieldId];
+    }
     if (digits.length < 2) return;
     const next = FIELD_ORDER[FIELD_ORDER.indexOf(fieldId) + 1];
-    if (next) fieldRefs.current[next]?.focus();
+    if (!next) return;
+
+    const maxDigits = fieldId.endsWith("-min") ? 3 : 2;
+    if (digits.length >= maxDigits) {
+      fieldRefs.current[next]?.focus();
+      return;
+    }
+    pendingAdvance.current[fieldId] = setTimeout(() => {
+      delete pendingAdvance.current[fieldId];
+      fieldRefs.current[next]?.focus();
+    }, 500);
   }
 
   function buildInput(): ZoneActivityInput & { date: string } {
