@@ -9,9 +9,9 @@ import {
   buildStravaZoneActivity,
 } from "@/lib/challenges/challenge-doc";
 import { mapStravaSportType } from "@/lib/strava/sport-type";
-import { mapStravaHeartrateZones, type ZoneMinutes } from "@/lib/strava/zones";
+import { computeZoneMinutesFromStream, type ZoneMinutes } from "@/lib/strava/zones";
 import {
-  fetchActivityZones,
+  fetchActivityStreams,
   fetchRecentActivities,
   fetchStravaActivity,
   getValidToken,
@@ -308,12 +308,16 @@ export async function syncStravaActivity(
 
   if (activity.athlete.id !== user.strava.athleteId) return; // defensive
 
-  const needsZones = challenges.some((c) => challengeScoring(c) === "zone");
-  const zones = needsZones
-    ? mapStravaHeartrateZones(
-        await fetchActivityZones(tokens.accessToken, stravaActivityId)
-      )
-    : null;
+  // Zone sync needs the athlete's own max HR (self-reported on /profile) to
+  // compute zone minutes from the raw stream — skip entirely without one,
+  // same treatment as "no HR monitor" rather than guessing one.
+  const maxHeartRate = user.maxHeartRate;
+  const needsZones = challenges.some((c) => challengeScoring(c) === "zone") && !!maxHeartRate;
+  let zones: ZoneMinutes | null = null;
+  if (needsZones) {
+    const stream = await fetchActivityStreams(tokens.accessToken, stravaActivityId);
+    zones = stream ? computeZoneMinutesFromStream(stream, maxHeartRate) : null;
+  }
 
   for (const challenge of challenges) {
     if (challengeScoring(challenge) === "goal") {
