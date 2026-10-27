@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // --- A minimal in-memory Firestore fake, tailored to what sync.ts uses:
 // collection(path).doc(id).get()/.update(), collection(path).where(...).get(),
 // doc(path) as a batch target, and batch delete/update/set/commit.
-const { fakeDb, fakeStore, mockFetchStravaActivity, mockFetchActivityZones, mockGetValidToken, mockFetchRecentActivities } =
+const { fakeDb, fakeStore, mockFetchStravaActivity, mockFetchActivityStreams, mockGetValidToken, mockFetchRecentActivities } =
   vi.hoisted(() => {
     const store = new Map<string, any>();
     let counter = 0;
@@ -148,7 +148,7 @@ const { fakeDb, fakeStore, mockFetchStravaActivity, mockFetchActivityZones, mock
       fakeDb: db,
       fakeStore: store,
       mockFetchStravaActivity: vi.fn(),
-      mockFetchActivityZones: vi.fn(),
+      mockFetchActivityStreams: vi.fn(),
       mockGetValidToken: vi.fn(),
       mockFetchRecentActivities: vi.fn(),
     };
@@ -164,7 +164,7 @@ vi.mock("@/lib/firebase/admin", () => ({
 
 vi.mock("@/lib/strava/client", () => ({
   fetchStravaActivity: mockFetchStravaActivity,
-  fetchActivityZones: mockFetchActivityZones,
+  fetchActivityStreams: mockFetchActivityStreams,
   getValidToken: mockGetValidToken,
   fetchRecentActivities: mockFetchRecentActivities,
 }));
@@ -178,11 +178,13 @@ import { COLLECTIONS } from "@/lib/firebase/collections";
 
 const UID = "uid-1";
 const ATHLETE_ID = 42;
+const MAX_HR = 200; // round number -> clean zone boundaries at 120/140/160/180bpm
 
 function seed() {
   fakeStore.clear();
   fakeStore.set(`users/${UID}`, {
     challengeIds: ["ch-goal", "ch-zone"],
+    maxHeartRate: MAX_HR,
     strava: {
       athleteId: ATHLETE_ID,
       accessToken: "token-abc",
@@ -216,18 +218,16 @@ function seed() {
   });
 }
 
-const noHeartrateZones = [
-  {
-    type: "heartrate",
-    distribution_buckets: [
-      { min: 0, max: 0, time: 0 },
-      { min: 0, max: 0, time: 0 },
-      { min: 0, max: 0, time: 0 },
-      { min: 0, max: 0, time: 0 },
-      { min: 0, max: 0, time: 0 },
-    ],
-  },
-];
+// 15 min at 130bpm (65% of MAX_HR -> z2), then 5 min at 150bpm (75% -> z3).
+// Sampled every 30s (the per-sample gap cap in computeZoneMinutesFromStream)
+// so none of it gets capped away — a single 900s gap wouldn't reproduce
+// real zone-training minutes any more than it would in production.
+const z2Times = Array.from({ length: 30 }, (_, i) => i * 30); // 0..870, 15 min of gaps
+const z3Times = Array.from({ length: 11 }, (_, i) => 900 + i * 30); // 900..1200, 5 min of gaps
+const z2z3Stream = {
+  time: [...z2Times, ...z3Times],
+  heartrate: [...Array(30).fill(130), ...Array(11).fill(150)],
+};
 
 function baseActivity(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -253,18 +253,7 @@ describe("Strava activity sync", () => {
 
   it("syncs a new activity into both a matching goal challenge and a zone challenge", async () => {
     mockFetchStravaActivity.mockResolvedValue(baseActivity());
-    mockFetchActivityZones.mockResolvedValue([
-      {
-        type: "heartrate",
-        distribution_buckets: [
-          { min: 0, max: 0, time: 600 },
-          { min: 0, max: 0, time: 900 }, // z2 = 15 min
-          { min: 0, max: 0, time: 300 }, // z3 = 5 min
-          { min: 0, max: 0, time: 0 },
-          { min: 0, max: 0, time: 0 },
-        ],
-      },
-    ]);
+    mockFetchActivityStreams.mockResolvedValue(z2z3Stream);
 
     await syncStravaActivity(UID, 999);
 
@@ -281,7 +270,7 @@ describe("Strava activity sync", () => {
 
   it("re-syncing with changed data replaces the old entry instead of double-counting", async () => {
     mockFetchStravaActivity.mockResolvedValue(baseActivity());
-    mockFetchActivityZones.mockResolvedValue(noHeartrateZones);
+    mockFetchActivityStreams.mockResolvedValue(null);
     await syncStravaActivity(UID, 999);
 
     // Activity gets edited (distance corrected) on Strava and re-synced
@@ -300,7 +289,7 @@ describe("Strava activity sync", () => {
 
   it("skips the zone challenge entirely when there's no HR data", async () => {
     mockFetchStravaActivity.mockResolvedValue(baseActivity());
-    mockFetchActivityZones.mockResolvedValue([]);
+    mockFetchActivityStreams.mockResolvedValue(null);
 
     await syncStravaActivity(UID, 999);
 
@@ -309,9 +298,38 @@ describe("Strava activity sync", () => {
     expect(zoneMember.zoneMinutes).toEqual({ z2: 0, z3: 0, z4: 0, z5: 0 });
   });
 
+  it("skips the zone challenge, without even fetching streams, when the athlete hasn't set a max heart rate", async () => {
+    fakeStore.set(`users/${UID}`, {
+      ...fakeStore.get(`users/${UID}`),
+      maxHeartRate: null,
+    });
+    mockFetchStravaActivity.mockResolvedValue(baseActivity());
+
+    await syncStravaActivity(UID, 999);
+
+    expect(mockFetchActivityStreams).not.toHaveBeenCalled();
+    const zoneMember = fakeStore.get(`challenges/ch-zone/members/${UID}`);
+    expect(zoneMember.activityCount).toBe(0);
+  });
+
+  it("a streams-fetch failure degrades to no zone data instead of sinking the goal-challenge sync too", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockFetchStravaActivity.mockResolvedValue(baseActivity());
+    mockFetchActivityStreams.mockRejectedValue(new Error("Strava streams fetch failed: 429"));
+
+    await syncStravaActivity(UID, 999);
+
+    const goalMember = fakeStore.get(`challenges/ch-goal/members/${UID}`);
+    expect(goalMember.activityCount).toBe(1); // goal sync still went through
+    const zoneMember = fakeStore.get(`challenges/ch-zone/members/${UID}`);
+    expect(zoneMember.activityCount).toBe(0); // zone sync skipped, not crashed
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
+  });
+
   it("removeStravaActivity re-verifies against Strava, then deletes and reverses totals once confirmed gone", async () => {
     mockFetchStravaActivity.mockResolvedValue(baseActivity());
-    mockFetchActivityZones.mockResolvedValue(noHeartrateZones);
+    mockFetchActivityStreams.mockResolvedValue(null);
     await syncStravaActivity(UID, 999);
 
     // Strava confirms the activity is really gone (404 -> null)
@@ -330,7 +348,7 @@ describe("Strava activity sync", () => {
 
   it("removeStravaActivity ignores a delete claim when Strava still has the activity (forged/incorrect delete event)", async () => {
     mockFetchStravaActivity.mockResolvedValue(baseActivity());
-    mockFetchActivityZones.mockResolvedValue(noHeartrateZones);
+    mockFetchActivityStreams.mockResolvedValue(null);
     await syncStravaActivity(UID, 999);
 
     // The webhook claims deletion, but re-fetching Strava shows the
@@ -350,7 +368,7 @@ describe("Strava activity sync", () => {
 
   it("syncStravaActivity cleans up a stale entry when Strava confirms the activity no longer exists", async () => {
     mockFetchStravaActivity.mockResolvedValue(baseActivity());
-    mockFetchActivityZones.mockResolvedValue(noHeartrateZones);
+    mockFetchActivityStreams.mockResolvedValue(null);
     await syncStravaActivity(UID, 999);
 
     // A create/update event arrives late, after the activity was deleted

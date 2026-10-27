@@ -25,6 +25,7 @@ Field-level types: `src/types/user.ts`, `challenge.ts`, `activity.ts`. Path help
 - `Challenge.scoring?: "goal" | "zone" | "variety"` — read via `challengeScoring()` (`src/lib/challenges/scoring.ts`).
 - `Activity.source: "strava" | "manual"`, `stravaActivityId: number | null`. Strava-sourced activities are written only by Admin-SDK server code; rules enforce `source == 'manual'` on client creates.
 - **Deletes are not source-restricted.** A member can delete any of their own activities via `deleteActivity()` (`src/lib/challenges/service.ts`), Strava-synced included. This doesn't touch Strava: if a later webhook event touches that activity, `syncStravaActivity`'s self-healing recreates it. No tombstones — accepted tradeoff for a ~15-person app, documented in the function's doc comment.
+- `User.maxHeartRate?: number | null` — self-reported on `/profile`, bpm. Required for Strava zone-training sync (see Zone challenges below); unset or null skips it entirely, same as "no HR monitor."
 
 ## Zone challenges
 
@@ -33,6 +34,8 @@ Rules live on `Challenge.zoneConfig`. `DEFAULT_ZONE_CONFIG` (`src/lib/challenges
 **Two freezing behaviors — easy to get backwards:**
 - Multiplier / Others / Recovery values are baked into `Activity.points` and `member.totalPoints` **at log time**. Editing the config never rewrites past entries.
 - The bonus is applied **live** in `effectiveZonePoints()` from the current `zoneConfig.bonus`. Changing it immediately changes everyone's displayed total, including points earned before the edit.
+
+**Strava zone-training sync computes zone minutes itself, from the raw heart-rate stream** (`computeZoneMinutesFromStream`, `src/lib/strava/zones.ts`) — it does **not** use Strava's `/activities/{id}/zones` endpoint. That endpoint reflects whatever zone boundaries Strava has on file (the athlete's custom Strava zones, or Strava's own default), which aren't guaranteed to match the classic %-of-max-HR model this app and Garmin use, and it requires a Strava Summit subscription, which would otherwise silently break sync for any non-Summit athlete (the old code didn't handle a non-404 error there — it threw, uncaught, all the way out of the webhook handler). Instead, `fetchActivityStreams` (`src/lib/strava/client.ts`) pulls the raw `time`/`heartrate` streams and `computeZoneMinutesFromStream` buckets each sample against the athlete's own `User.maxHeartRate` (Z2 60–70% / Z3 70–80% / Z4 80–90% / Z5 90–100%+, Z1 and below dropped — same convention as the rest of this model having no Z1). No `maxHeartRate` set = zone sync skipped for that athlete, not guessed. Past Strava-synced activities aren't retroactively recomputed if someone sets or changes their max HR later — only future syncs use it.
 
 ## Variety challenges
 

@@ -35,6 +35,12 @@ export const profileSchema = z.object({
   displayName: displayNameSchema,
 });
 
+export const maxHeartRateSchema = z
+  .number({ invalid_type_error: "Enter your max heart rate in bpm" })
+  .int("Max heart rate must be a whole number")
+  .min(100, "That looks too low for a max heart rate")
+  .max(230, "That looks too high for a max heart rate");
+
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type LoginInput = z.infer<typeof loginSchema>;
 export type ProfileInput = z.infer<typeof profileSchema>;

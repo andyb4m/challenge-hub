@@ -1,5 +1,5 @@
 import type { StravaActivity } from "@/types";
-import type { StravaZoneDistribution } from "@/lib/strava/zones";
+import type { HeartRateStream } from "@/lib/strava/zones";
 
 const STRAVA_API_BASE = "https://www.strava.com/api/v3";
 const STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token";
@@ -71,26 +71,43 @@ export async function fetchStravaActivity(
   return res.json() as Promise<StravaActivity>;
 }
 
+interface StravaStreamSet {
+  time?: { data: number[] };
+  heartrate?: { data: number[] };
+}
+
 /**
- * Time-in-zone distribution for an activity (heart rate and/or power).
- * 404s when the activity has no zone data at all (no HR monitor used,
- * or the athlete hasn't configured zones) — treated the same as an
- * empty distribution rather than an error.
+ * Raw time + heart-rate streams for an activity, for computing zone
+ * minutes ourselves (see computeZoneMinutesFromStream, strava/zones.ts)
+ * rather than trusting Strava's own /activities/{id}/zones endpoint —
+ * that one reflects Strava's own zone boundaries (which may not match
+ * the %-of-max-HR model this app uses) and requires a Strava Summit
+ * subscription; streams requires neither.
+ *
+ * Returns null when there's no heart-rate data at all — a 404 (no
+ * streams at all, e.g. a manually created activity), or a 200 whose
+ * response simply has no `heartrate` key (recorded without an HR
+ * monitor) — treated the same as "nothing to compute zones from",
+ * same convention as a missing zone distribution used to be.
  */
-export async function fetchActivityZones(
+export async function fetchActivityStreams(
   accessToken: string,
   activityId: number
-): Promise<StravaZoneDistribution[]> {
-  const res = await fetch(`${STRAVA_API_BASE}/activities/${activityId}/zones`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+): Promise<HeartRateStream | null> {
+  const res = await fetch(
+    `${STRAVA_API_BASE}/activities/${activityId}/streams?keys=time,heartrate&key_by_type=true`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
 
   if (!res.ok) {
-    if (res.status === 404) return [];
-    throw new Error(`Strava zones fetch failed: ${res.status}`);
+    if (res.status === 404) return null;
+    throw new Error(`Strava streams fetch failed: ${res.status}`);
   }
 
-  return res.json() as Promise<StravaZoneDistribution[]>;
+  const streams = (await res.json()) as StravaStreamSet;
+  if (!streams.time?.data || !streams.heartrate?.data) return null;
+
+  return { time: streams.time.data, heartrate: streams.heartrate.data };
 }
 
 export async function fetchRecentActivities(
