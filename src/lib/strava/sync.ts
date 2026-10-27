@@ -315,8 +315,16 @@ export async function syncStravaActivity(
   const needsZones = challenges.some((c) => challengeScoring(c) === "zone") && !!maxHeartRate;
   let zones: ZoneMinutes | null = null;
   if (needsZones) {
-    const stream = await fetchActivityStreams(tokens.accessToken, stravaActivityId);
-    zones = stream ? computeZoneMinutesFromStream(stream, maxHeartRate) : null;
+    // A streams-fetch failure (rate limit, transient 5xx) shouldn't also
+    // sink this activity's goal-challenge reconciliation below — degrade to
+    // "no zone data" and let the rest of the sync proceed, the same way a
+    // 404 (no HR monitor) already does.
+    try {
+      const stream = await fetchActivityStreams(tokens.accessToken, stravaActivityId);
+      zones = stream ? computeZoneMinutesFromStream(stream, maxHeartRate) : null;
+    } catch (err) {
+      console.error("fetchActivityStreams failed, skipping zone data:", err);
+    }
   }
 
   for (const challenge of challenges) {

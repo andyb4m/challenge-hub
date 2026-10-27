@@ -1,5 +1,13 @@
 export type ZoneMinutes = { z2: number; z3: number; z4: number; z5: number };
 
+// Strava's `time` stream counts seconds since start, with a gap wherever
+// recording paused (a stoplight, a café break, auto-pause). Crediting the
+// full gap to whatever zone the last reading before the pause happened to
+// be in would inflate that zone — a real risk given Z4/Z5 score higher.
+// Most continuous recording samples well under this; a genuine pause runs
+// into minutes, not seconds, so the cap only ever bites on a pause.
+const MAX_SAMPLE_GAP_SECONDS = 30;
+
 /** Raw per-sample heart-rate stream from GET /activities/{id}/streams. */
 export interface HeartRateStream {
   /** Seconds since activity start, one per sample. */
@@ -57,12 +65,13 @@ export function computeZoneMinutesFromStream(
   for (let i = 0; i < heartrate.length; i++) {
     const zone = zoneForPercent(heartrate[i] / maxHeartRate);
     if (!zone) continue;
-    // Duration this sample represents: time until the next sample (clamped
-    // at 0 in case a stream ever arrives out of order). The last sample
-    // gets no duration (nothing to bound it by) rather than guessing — a
-    // one-sample undercount is negligible.
+    // Duration this sample represents: time until the next sample, capped
+    // (see MAX_SAMPLE_GAP_SECONDS) and clamped at 0 in case a stream ever
+    // arrives out of order. The last sample gets no duration (nothing to
+    // bound it by) rather than guessing — a one-sample undercount is
+    // negligible.
     const gap = i < time.length - 1 ? time[i + 1] - time[i] : 0;
-    minutes[zone] += Math.max(gap, 0) / 60;
+    minutes[zone] += Math.min(Math.max(gap, 0), MAX_SAMPLE_GAP_SECONDS) / 60;
   }
   return minutes;
 }

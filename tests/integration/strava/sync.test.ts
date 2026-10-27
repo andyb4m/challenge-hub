@@ -218,8 +218,16 @@ function seed() {
   });
 }
 
-// 15 min at 130bpm (65% of MAX_HR -> z2), then 5 min at 150bpm (75% -> z3)
-const z2z3Stream = { time: [0, 900, 1200], heartrate: [130, 150, 150] };
+// 15 min at 130bpm (65% of MAX_HR -> z2), then 5 min at 150bpm (75% -> z3).
+// Sampled every 30s (the per-sample gap cap in computeZoneMinutesFromStream)
+// so none of it gets capped away — a single 900s gap wouldn't reproduce
+// real zone-training minutes any more than it would in production.
+const z2Times = Array.from({ length: 30 }, (_, i) => i * 30); // 0..870, 15 min of gaps
+const z3Times = Array.from({ length: 11 }, (_, i) => 900 + i * 30); // 900..1200, 5 min of gaps
+const z2z3Stream = {
+  time: [...z2Times, ...z3Times],
+  heartrate: [...Array(30).fill(130), ...Array(11).fill(150)],
+};
 
 function baseActivity(overrides: Partial<Record<string, unknown>> = {}) {
   return {
@@ -302,6 +310,21 @@ describe("Strava activity sync", () => {
     expect(mockFetchActivityStreams).not.toHaveBeenCalled();
     const zoneMember = fakeStore.get(`challenges/ch-zone/members/${UID}`);
     expect(zoneMember.activityCount).toBe(0);
+  });
+
+  it("a streams-fetch failure degrades to no zone data instead of sinking the goal-challenge sync too", async () => {
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    mockFetchStravaActivity.mockResolvedValue(baseActivity());
+    mockFetchActivityStreams.mockRejectedValue(new Error("Strava streams fetch failed: 429"));
+
+    await syncStravaActivity(UID, 999);
+
+    const goalMember = fakeStore.get(`challenges/ch-goal/members/${UID}`);
+    expect(goalMember.activityCount).toBe(1); // goal sync still went through
+    const zoneMember = fakeStore.get(`challenges/ch-zone/members/${UID}`);
+    expect(zoneMember.activityCount).toBe(0); // zone sync skipped, not crashed
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 
   it("removeStravaActivity re-verifies against Strava, then deletes and reverses totals once confirmed gone", async () => {
