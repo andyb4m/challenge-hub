@@ -130,13 +130,18 @@ export function ChallengeForm() {
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label>Challenge type</Label>
-            <div className="grid gap-2 sm:grid-cols-3">
+            <Label id="challengeTypeLabel">Challenge type</Label>
+            <div
+              role="group"
+              aria-labelledby="challengeTypeLabel"
+              className="grid gap-2 sm:grid-cols-3"
+            >
               {SCORING_OPTIONS.map((option) => (
                 <button
                   key={option.value}
                   type="button"
                   onClick={() => setScoring(option.value)}
+                  aria-pressed={scoring === option.value}
                   className={cn(
                     "flex flex-col items-start gap-1 rounded-lg border-2 p-3 text-left transition-colors",
                     scoring === option.value
