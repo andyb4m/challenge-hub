@@ -42,6 +42,14 @@ const config: Config = {
         line: {
           DEFAULT: "#334155",
           light: "#475569",
+          // Form-control outlines: ≥3:1 against card and input fill
+          // (WCAG 1.4.11). DEFAULT stays for dividers, which don't need it.
+          strong: "#64748b",
+        },
+        strava: {
+          DEFAULT: "#FC4C02",
+          // Brand orange as small text on its own 10% tint: 5.1:1
+          light: "#fd6a2c",
         },
         success: "#10b981",
         warning: "#f59e0b",

@@ -23,6 +23,10 @@ const SERIES_COLORS = [
   "#f43f5e",
   "#3b82f6",
 ];
+// A second, non-color cue per line (WCAG 1.4.1): solid, dashed, dotted.
+// Three patterns against eight colors means players sharing a color once
+// there are more than eight (index i and i+8) still get different dashes.
+const SERIES_DASHES = [undefined, "6 4", "1 4"];
 const GRID_COLOR = "#334155";
 const LABEL_COLOR = "#94a3b8";
 
@@ -171,6 +175,7 @@ export function ProgressChart({ data }: { data: ZoneProgressChartData }) {
                 points={s.points.map((p, i) => `${x(i)},${y(p)}`).join(" ")}
                 fill="none"
                 stroke={SERIES_COLORS[seriesIndex % SERIES_COLORS.length]}
+                strokeDasharray={SERIES_DASHES[seriesIndex % SERIES_DASHES.length]}
                 strokeWidth={2}
                 strokeLinejoin="round"
                 strokeLinecap="round"
@@ -179,7 +184,10 @@ export function ProgressChart({ data }: { data: ZoneProgressChartData }) {
           )}
         </svg>
 
-        <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-xs">
+        {/* min-h-6 rows keep each toggle at the 24px target size (WCAG 2.5.8)
+            even when names wrap onto several lines. The trailing total is
+            the chart's data in text form. */}
+        <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
           {series.map((s, i) => {
             const hidden = hiddenUids.has(s.uid);
             return (
@@ -189,15 +197,30 @@ export function ProgressChart({ data }: { data: ZoneProgressChartData }) {
                   onClick={() => toggleUid(s.uid)}
                   aria-pressed={!hidden}
                   className={cn(
-                    "flex items-center gap-1.5 transition-opacity",
-                    hidden ? "text-faint opacity-50" : "text-muted"
+                    "flex min-h-6 items-center gap-1.5",
+                    hidden ? "text-faint line-through" : "text-muted"
                   )}
                 >
-                  <span
-                    className="h-2 w-2 rounded-full"
-                    style={{ backgroundColor: SERIES_COLORS[i % SERIES_COLORS.length] }}
-                  />
+                  <svg
+                    viewBox="0 0 16 8"
+                    className={cn("h-2 w-4", hidden && "opacity-40")}
+                    aria-hidden="true"
+                  >
+                    <line
+                      x1={1}
+                      x2={15}
+                      y1={4}
+                      y2={4}
+                      stroke={SERIES_COLORS[i % SERIES_COLORS.length]}
+                      strokeDasharray={SERIES_DASHES[i % SERIES_DASHES.length]}
+                      strokeWidth={2}
+                      strokeLinecap="round"
+                    />
+                  </svg>
                   {s.displayName}
+                  <span className="tabular-nums text-faint">
+                    {(s.points.at(-1) ?? 0).toLocaleString()}
+                  </span>
                 </button>
               </li>
             );
