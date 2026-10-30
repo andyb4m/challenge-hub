@@ -41,8 +41,14 @@ function ChallengeDetail({ challengeId }: { challengeId: string }) {
 
   if (!challenge) {
     return (
-      <div className="flex min-h-[50vh] items-center justify-center">
+      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-3">
         <p className="text-sm text-muted">Challenge not found.</p>
+        <Link
+          href="/challenges"
+          className="text-sm font-medium text-primary-light hover:underline"
+        >
+          Back to your challenges
+        </Link>
       </div>
     );
   }
@@ -73,7 +79,7 @@ function ChallengeDetail({ challengeId }: { challengeId: string }) {
           <p className="text-sm text-muted">{challenge.description}</p>
         )}
         {status === "ended" && (
-          <p className="rounded-md border border-error/30 bg-error/10 px-4 py-3 text-sm font-medium text-error">
+          <p className="rounded-md border border-success/30 bg-success/10 px-4 py-3 text-sm font-medium text-success">
             Challenge completed! 🏁 Check out the final ranking below.
           </p>
         )}

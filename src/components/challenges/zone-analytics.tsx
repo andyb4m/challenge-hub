@@ -63,6 +63,12 @@ export function ZoneAnalytics({
                       )}
                     >
                       {displayRatioPercent(ratio, config)}% low intensity
+                      {/* Green/red alone carries in-band status; sighted users
+                          also get the marker's position on the gauge below,
+                          which is aria-hidden, so say it in words here. */}
+                      <span className="sr-only">
+                        {inBand ? ", in the bonus range" : ", outside the bonus range"}
+                      </span>
                     </span>
                   </div>
                   <div

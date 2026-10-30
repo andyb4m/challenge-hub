@@ -75,12 +75,27 @@ export function ActivityFeed({
   currentUid: string;
 }) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  // Two-step delete: the trash icon only arms it, so a stray tap on a phone
+  // can't silently remove an activity (Strava-synced ones included).
+  const [confirmingId, setConfirmingId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<
+    { id: string; message: string } | null
+  >(null);
   const [sortBy, setSortBy] = useState<SortKey>("date");
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
   const [mineOnly, setMineOnly] = useState(false);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const sortMenuRef = useRef<HTMLDivElement>(null);
+  const sortTriggerRef = useRef<HTMLButtonElement>(null);
+  const sortItemRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const confirmCancelRef = useRef<HTMLButtonElement>(null);
   const nameByUid = new Map(members.map((m) => [m.uid, m.displayName]));
+
+  // Arming a delete disables the trash button that had focus; move focus to
+  // the confirm row's Cancel (the safe choice) so keyboard users land there.
+  useEffect(() => {
+    if (confirmingId) confirmCancelRef.current?.focus();
+  }, [confirmingId]);
 
   useEffect(() => {
     if (!sortMenuOpen) return;
@@ -90,7 +105,10 @@ export function ActivityFeed({
       }
     }
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setSortMenuOpen(false);
+      if (event.key === "Escape") {
+        setSortMenuOpen(false);
+        sortTriggerRef.current?.focus();
+      }
     }
     document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("keydown", handleKeyDown);
@@ -117,6 +135,32 @@ export function ActivityFeed({
   useEffect(() => {
     if (!sortOptions.includes(sortBy)) setSortBy("date");
   }, [sortOptions, sortBy]);
+
+  // Menu pattern: opening moves focus onto the current choice
+  const sortIndex = Math.max(sortOptions.indexOf(sortBy), 0);
+  useEffect(() => {
+    if (sortMenuOpen) sortItemRefs.current[sortIndex]?.focus();
+  }, [sortMenuOpen, sortIndex]);
+
+  function handleSortMenuKeyDown(event: React.KeyboardEvent) {
+    const items = sortItemRefs.current.filter(
+      (el): el is HTMLButtonElement => el !== null
+    );
+    const at = items.indexOf(document.activeElement as HTMLButtonElement);
+    const last = items.length - 1;
+    const target =
+      event.key === "ArrowDown" ? (at >= last ? 0 : at + 1)
+      : event.key === "ArrowUp" ? (at <= 0 ? last : at - 1)
+      : event.key === "Home" ? 0
+      : event.key === "End" ? last
+      : null;
+    if (target !== null) {
+      event.preventDefault();
+      items[target]?.focus();
+    } else if (event.key === "Tab") {
+      setSortMenuOpen(false);
+    }
+  }
 
   const hasOthersActivity = activities.some((a) => a.uid !== currentUid);
 
@@ -145,8 +189,15 @@ export function ActivityFeed({
 
   async function handleDelete(activity: Activity) {
     setDeletingId(activity.id);
+    setDeleteError(null);
     try {
       await deleteActivity(activity);
+      setConfirmingId(null);
+    } catch {
+      setDeleteError({
+        id: activity.id,
+        message: "Could not remove this activity. Please try again.",
+      });
     } finally {
       setDeletingId(null);
     }
@@ -177,6 +228,7 @@ export function ActivityFeed({
             {sortOptions.length > 1 && (
               <div ref={sortMenuRef} className="relative">
                 <Button
+                  ref={sortTriggerRef}
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8 rounded-full"
@@ -191,19 +243,27 @@ export function ActivityFeed({
                 {sortMenuOpen && (
                   <div
                     role="menu"
+                    aria-label="Sort activities"
+                    onKeyDown={handleSortMenuKeyDown}
                     className="absolute right-0 top-10 z-20 w-36 overflow-hidden rounded-xl border border-line bg-card shadow-card"
                   >
-                    {sortOptions.map((key) => (
+                    {sortOptions.map((key, index) => (
                       <button
                         key={key}
+                        ref={(el) => {
+                          sortItemRefs.current[index] = el;
+                        }}
                         type="button"
-                        role="menuitem"
+                        role="menuitemradio"
+                        aria-checked={key === sortBy}
+                        tabIndex={-1}
                         onClick={() => {
                           setSortBy(key);
                           setSortMenuOpen(false);
+                          sortTriggerRef.current?.focus();
                         }}
                         className={cn(
-                          "block w-full px-4 py-2.5 text-left text-sm hover:bg-white/5",
+                          "block w-full px-4 py-2.5 text-left text-sm hover:bg-white/5 focus-visible:bg-white/5 focus-visible:outline-none",
                           key === sortBy
                             ? "font-semibold text-foreground"
                             : "text-muted hover:text-foreground"
@@ -232,61 +292,101 @@ export function ActivityFeed({
               return (
               <li
                 key={activity.id}
-                className="flex items-center justify-between gap-3 border-b border-line/60 pb-3 last:border-b-0 last:pb-0"
+                className="flex flex-col gap-2 border-b border-line/60 pb-3 last:border-b-0 last:pb-0"
               >
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-1.5">
-                      <p className="truncate text-sm font-medium text-foreground">
-                        {activity.source === "strava" && activity.stravaActivityId ? (
-                          <a
-                            href={`https://www.strava.com/activities/${activity.stravaActivityId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="hover:underline"
-                            title="View on Strava"
-                          >
-                            {activity.name}
-                          </a>
-                        ) : (
-                          activity.name
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-baseline justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-1.5">
+                        <p className="truncate text-sm font-medium text-foreground">
+                          {activity.source === "strava" && activity.stravaActivityId ? (
+                            <a
+                              href={`https://www.strava.com/activities/${activity.stravaActivityId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:underline"
+                              title="View on Strava"
+                            >
+                              {activity.name}
+                            </a>
+                          ) : (
+                            activity.name
+                          )}
+                        </p>
+                        {activity.source === "strava" && (
+                          <span className="shrink-0 rounded-full bg-strava/10 px-1.5 py-0.5 text-xs font-semibold text-strava-light">
+                            Strava
+                          </span>
                         )}
-                      </p>
-                      {activity.source === "strava" && (
-                        <span className="shrink-0 rounded-full bg-[#FC4C02]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#FC4C02]">
-                          Strava
+                      </div>
+                      {points !== null && (
+                        <span className="shrink-0 whitespace-nowrap text-sm font-bold tabular-nums text-foreground">
+                          {points.toLocaleString()} pts
                         </span>
                       )}
                     </div>
-                    {points !== null && (
-                      <span className="shrink-0 whitespace-nowrap text-sm font-bold tabular-nums text-foreground">
-                        {points.toLocaleString()} pts
-                      </span>
+                    <p className="text-xs text-muted">
+                      {nameByUid.get(activity.uid) ?? "Former member"} ·{" "}
+                      {activity.startDate.slice(0, 10)}
+                    </p>
+                    {metrics && (
+                      <p className="mt-0.5 text-xs text-faint">{metrics}</p>
                     )}
                   </div>
-                  <p className="text-xs text-muted">
-                    {nameByUid.get(activity.uid) ?? "Former member"} ·{" "}
-                    {activity.startDate.slice(0, 10)}
+                  <div className="flex w-8 shrink-0 items-center justify-center">
+                    {activity.uid === currentUid && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full text-error hover:bg-error/10"
+                        onClick={() => {
+                          setDeleteError(null);
+                          setConfirmingId(activity.id);
+                        }}
+                        disabled={confirmingId === activity.id}
+                        aria-label="Remove activity"
+                        title="Remove activity"
+                      >
+                        <TrashIcon className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {confirmingId === activity.id && (
+                  <div className="flex flex-wrap items-center justify-end gap-2">
+                    <span className="text-xs text-muted">
+                      Remove this activity?
+                    </span>
+                    {/* Grouped so the pair wraps as one on narrow phones */}
+                    <div className="flex gap-2">
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleDelete(activity)}
+                        disabled={deletingId === activity.id}
+                      >
+                        {deletingId === activity.id ? "Removing…" : "Remove"}
+                      </Button>
+                      <Button
+                        ref={confirmCancelRef}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setConfirmingId(null);
+                          setDeleteError(null);
+                        }}
+                        disabled={deletingId === activity.id}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {deleteError?.id === activity.id && (
+                  <p role="alert" className="text-right text-xs text-error">
+                    {deleteError.message}
                   </p>
-                  {metrics && (
-                    <p className="mt-0.5 text-xs text-faint">{metrics}</p>
-                  )}
-                </div>
-                <div className="flex w-8 shrink-0 items-center justify-center">
-                  {activity.uid === currentUid && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 rounded-full text-error hover:bg-error/10"
-                      onClick={() => handleDelete(activity)}
-                      disabled={deletingId === activity.id}
-                      aria-label="Remove activity"
-                      title="Remove activity"
-                    >
-                      <TrashIcon className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
+                )}
               </li>
               );
             })}
