@@ -10,7 +10,7 @@ const variantClasses: Record<Variant, string> = {
   outline:
     "border border-line bg-card text-foreground hover:border-primary hover:bg-card-hover",
   ghost: "text-muted hover:bg-white/5 hover:text-foreground",
-  destructive: "bg-error text-white hover:bg-error/100",
+  destructive: "bg-error-dark text-white hover:bg-error-dark/90",
 };
 
 const sizeClasses: Record<Size, string> = {

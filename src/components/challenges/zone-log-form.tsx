@@ -182,12 +182,17 @@ export function ZoneLogForm({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="grid grid-cols-3 gap-2">
+          <div
+            role="group"
+            aria-label="Activity type"
+            className="grid grid-cols-3 gap-2"
+          >
             {KIND_PILLS.map((pill) => (
               <button
                 key={pill.value}
                 type="button"
                 onClick={() => setKind(pill.value)}
+                aria-pressed={kind === pill.value}
                 className={cn(
                   "flex flex-col items-center gap-1 rounded-lg border-2 px-2 py-3 text-sm font-medium transition-colors",
                   kind === pill.value
@@ -195,7 +200,9 @@ export function ZoneLogForm({
                     : "border-line bg-background-secondary text-muted hover:border-line-light"
                 )}
               >
-                <span className="text-xl">{pill.emoji}</span>
+                <span className="text-xl" aria-hidden="true">
+                  {pill.emoji}
+                </span>
                 {pill.label}
               </button>
             ))}
@@ -278,13 +285,18 @@ export function ZoneLogForm({
 
           {kind === "others" && (
             <div className="flex flex-col gap-1.5">
-              <Label>Duration</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <Label id="zoneDurationLabel">Duration</Label>
+              <div
+                role="group"
+                aria-labelledby="zoneDurationLabel"
+                className="grid grid-cols-2 gap-2"
+              >
                 {(["30", "60"] as const).map((t) => (
                   <button
                     key={t}
                     type="button"
                     onClick={() => setTier(t)}
+                    aria-pressed={tier === t}
                     className={cn(
                       "rounded-lg border-2 px-3 py-2 text-sm font-medium transition-colors",
                       tier === t

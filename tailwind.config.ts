@@ -23,10 +23,14 @@ const config: Config = {
           DEFAULT: "#16213e",
           hover: "#1e2749",
         },
+        // Text-on-dark tokens (faint, primary.light, error, info) are tuned
+        // to ≥4.5:1 on `card` and `card.hover` (WCAG AA). The legacy values
+        // (#64748b, #8b5cf6, #ef4444, #3b82f6) measured 3.3–4.2:1 there.
+        // Their tints (bg-error/10, border-info/30) are unaffected in practice.
         primary: {
           DEFAULT: "#6366f1",
           dark: "#4f46e5",
-          light: "#8b5cf6",
+          light: "#a78bfa",
         },
         accent: {
           DEFAULT: "#06d6a0",
@@ -34,15 +38,19 @@ const config: Config = {
         },
         foreground: "#ffffff",
         muted: "#94a3b8",
-        faint: "#64748b",
+        faint: "#8492a6",
         line: {
           DEFAULT: "#334155",
           light: "#475569",
         },
         success: "#10b981",
         warning: "#f59e0b",
-        error: "#ef4444",
-        info: "#3b82f6",
+        error: {
+          DEFAULT: "#f87171",
+          // Solid fill behind white text (destructive button): 4.8:1
+          dark: "#dc2626",
+        },
+        info: "#60a5fa",
       },
       fontFamily: {
         sans: [
@@ -55,7 +63,10 @@ const config: Config = {
         ],
       },
       backgroundImage: {
-        "gradient-primary": "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+        // One step darker than the legacy #6366f1 → #8b5cf6 (white text
+        // measured 4.2–4.5:1 there; this is 5.7–6.3:1). Gradient *text*
+        // on the dark page keeps the lighter --gradient-primary in globals.css.
+        "gradient-primary": "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
         "gradient-hero":
           "linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)",
       },

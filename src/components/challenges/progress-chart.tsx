@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ZoneProgressChartData } from "@/lib/challenges/progress-chart";
 import {
   Card,
@@ -26,12 +26,17 @@ const SERIES_COLORS = [
 const GRID_COLOR = "#334155";
 const LABEL_COLOR = "#94a3b8";
 
-const WIDTH = 640;
+// The viewBox width tracks the rendered width, so 1 SVG unit = 1 CSS px and
+// labels render at LABEL_FONT_SIZE on every screen. A fixed 640-wide viewBox
+// scaled down to a phone card shrank them to ~5px.
+const DEFAULT_WIDTH = 640;
 const HEIGHT = 280;
-const PADDING = { top: 16, right: 16, bottom: 28, left: 32 };
-const PLOT_WIDTH = WIDTH - PADDING.left - PADDING.right;
+const PADDING = { top: 16, right: 16, bottom: 28, left: 36 };
 const PLOT_HEIGHT = HEIGHT - PADDING.top - PADDING.bottom;
 const Y_TICKS = 4;
+const LABEL_FONT_SIZE = 11;
+// Room each "MM-DD" x-axis label needs before the next one
+const MIN_X_LABEL_SPACING = 64;
 
 /**
  * Hand-rolled SVG line chart — no charting dependency, matches the
@@ -40,6 +45,22 @@ const Y_TICKS = 4;
 export function ProgressChart({ data }: { data: ZoneProgressChartData }) {
   const { dates, series } = data;
   const [hiddenUids, setHiddenUids] = useState<Set<string>>(new Set());
+  const [width, setWidth] = useState(DEFAULT_WIDTH);
+  const svgRef = useRef<SVGSVGElement>(null);
+  const hasChart = dates.length >= 2;
+
+  // Re-attached when the chart first appears (the empty state renders no
+  // svg to observe).
+  useEffect(() => {
+    const el = svgRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      const measured = Math.round(entry.contentRect.width);
+      if (measured > 0) setWidth(measured);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasChart]);
 
   function toggleUid(uid: string) {
     setHiddenUids((prev) => {
@@ -50,7 +71,7 @@ export function ProgressChart({ data }: { data: ZoneProgressChartData }) {
     });
   }
 
-  if (dates.length < 2) {
+  if (!hasChart) {
     return (
       <Card>
         <CardHeader>
@@ -71,14 +92,19 @@ export function ProgressChart({ data }: { data: ZoneProgressChartData }) {
   // has hidden every line, so the axes don't collapse to nothing.
   const scaleSeries = visibleSeries.length > 0 ? visibleSeries : series;
   const maxY = Math.max(1, ...scaleSeries.flatMap((s) => s.points));
-  const x = (i: number) => PADDING.left + (i / (dates.length - 1)) * PLOT_WIDTH;
+  const plotWidth = width - PADDING.left - PADDING.right;
+  const x = (i: number) => PADDING.left + (i / (dates.length - 1)) * plotWidth;
   const y = (value: number) => PADDING.top + PLOT_HEIGHT - (value / maxY) * PLOT_HEIGHT;
 
   const yTickValues = Array.from({ length: Y_TICKS + 1 }, (_, i) =>
     Math.round((maxY / Y_TICKS) * i)
   );
 
-  const xLabelCount = Math.min(dates.length, 5);
+  const xLabelCount = Math.min(
+    dates.length,
+    5,
+    Math.max(2, Math.floor(plotWidth / MIN_X_LABEL_SPACING))
+  );
   const xLabelIndices = Array.from({ length: xLabelCount }, (_, i) =>
     Math.round((i / Math.max(xLabelCount - 1, 1)) * (dates.length - 1))
   );
@@ -96,7 +122,8 @@ export function ProgressChart({ data }: { data: ZoneProgressChartData }) {
           </p>
         )}
         <svg
-          viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+          ref={svgRef}
+          viewBox={`0 0 ${width} ${HEIGHT}`}
           className="w-full"
           role="img"
           aria-label="Cumulative points over time, one line per player"
@@ -105,7 +132,7 @@ export function ProgressChart({ data }: { data: ZoneProgressChartData }) {
             <g key={value}>
               <line
                 x1={PADDING.left}
-                x2={WIDTH - PADDING.right}
+                x2={width - PADDING.right}
                 y1={y(value)}
                 y2={y(value)}
                 stroke={GRID_COLOR}
@@ -116,7 +143,7 @@ export function ProgressChart({ data }: { data: ZoneProgressChartData }) {
                 y={y(value)}
                 textAnchor="end"
                 dominantBaseline="middle"
-                fontSize={10}
+                fontSize={LABEL_FONT_SIZE}
                 fill={LABEL_COLOR}
               >
                 {value}
@@ -130,7 +157,7 @@ export function ProgressChart({ data }: { data: ZoneProgressChartData }) {
               x={x(i)}
               y={HEIGHT - 8}
               textAnchor="middle"
-              fontSize={10}
+              fontSize={LABEL_FONT_SIZE}
               fill={LABEL_COLOR}
             >
               {dates[i].slice(5)}
