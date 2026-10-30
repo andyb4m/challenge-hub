@@ -28,4 +28,16 @@ export interface User {
    * doc on account deletion.
    */
   screenshotScans?: { date: string; count: number };
+  /**
+   * Self-reported max heart rate (bpm), set on /profile. Required for
+   * Strava zone-training sync: we compute zone minutes ourselves from the
+   * raw heart-rate stream against the classic %-of-max-HR model (Z2
+   * 60-70%, Z3 70-80%, Z4 80-90%, Z5 90-100%+ — matches a Garmin zone
+   * chart), rather than trusting Strava's own zone boundaries, which may
+   * not use the same model. Unset = zone sync is skipped for this user,
+   * same treatment as "no HR monitor" (see computeZoneMinutesFromStream,
+   * src/lib/strava/zones.ts). No separate deletion path needed — removed
+   * with the rest of the user doc on account deletion.
+   */
+  maxHeartRate?: number | null;
 }

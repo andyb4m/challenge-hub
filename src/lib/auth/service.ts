@@ -129,6 +129,19 @@ export async function disconnectStrava(uid: string): Promise<void> {
   await updateDoc(userRef(uid), { strava: null });
 }
 
+/**
+ * Sets or clears the athlete's self-reported max heart rate, used to
+ * compute Strava zone-training sync (see User.maxHeartRate). Pass null
+ * to clear it, which pauses zone sync without touching the Strava
+ * connection itself.
+ */
+export async function updateMaxHeartRate(
+  uid: string,
+  maxHeartRate: number | null
+): Promise<void> {
+  await updateDoc(userRef(uid), { maxHeartRate });
+}
+
 /** Maps Firebase Auth error codes to messages fit for showing to users. */
 export function friendlyAuthError(err: unknown): string {
   const code =

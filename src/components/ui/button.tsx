@@ -10,7 +10,7 @@ const variantClasses: Record<Variant, string> = {
   outline:
     "border border-line bg-card text-foreground hover:border-primary hover:bg-card-hover",
   ghost: "text-muted hover:bg-white/5 hover:text-foreground",
-  destructive: "bg-error text-white hover:bg-error/100",
+  destructive: "bg-error-dark text-white hover:bg-error-dark/90",
 };
 
 const sizeClasses: Record<Size, string> = {
@@ -31,7 +31,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       ref={ref}
       type={type}
       className={cn(
-        "inline-flex items-center justify-center gap-2 rounded-md font-semibold transition-all duration-300",
+        "inline-flex items-center justify-center gap-2 rounded-md font-semibold transition duration-300",
+        // The default variant lifts on hover; keep the glow, drop the movement
+        "motion-reduce:transition-none motion-reduce:hover:translate-y-0",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-background",
         "disabled:pointer-events-none disabled:opacity-60",
         variantClasses[variant],

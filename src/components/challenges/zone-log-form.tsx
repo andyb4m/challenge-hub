@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Activity, Challenge, ZoneActivityKind } from "@/types";
 import { logZoneActivity, parseZoneScreenshot } from "@/lib/challenges/service";
 import {
@@ -93,6 +93,7 @@ export function ZoneLogForm({
   const [scanning, setScanning] = useState(false);
   const fieldRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const screenshotInputRef = useRef<HTMLInputElement>(null);
+  const pendingAdvance = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   async function handleScreenshot(file: File | undefined) {
     if (!file || !user) return;
@@ -120,13 +121,39 @@ export function ZoneLogForm({
     }
   }
 
-  // Auto-advances to the next field once this one has 2 digits — lets
-  // someone type the whole zone-training section without touching the
-  // screen between fields.
+  useEffect(() => {
+    const timers = pendingAdvance.current;
+    return () => {
+      Object.values(timers).forEach(clearTimeout);
+    };
+  }, []);
+
+  // Auto-advances to the next field once this one looks done — lets someone
+  // type the whole zone-training section without touching the screen
+  // between fields. Seconds always cap at 2 digits, so 2 digits there means
+  // done. Minutes allow a 3rd digit (100+ min zones are real — a long run's
+  // aerobic zone easily clears that), so 2 digits only *might* be done:
+  // wait briefly for a possible 3rd before advancing, canceling the wait if
+  // it arrives. Without this, typing "100" got cut to "10" the instant the
+  // 2nd digit landed, with no way to finish the number.
   function focusNextAfter(fieldId: string, digits: string) {
+    if (pendingAdvance.current[fieldId]) {
+      clearTimeout(pendingAdvance.current[fieldId]);
+      delete pendingAdvance.current[fieldId];
+    }
     if (digits.length < 2) return;
     const next = FIELD_ORDER[FIELD_ORDER.indexOf(fieldId) + 1];
-    if (next) fieldRefs.current[next]?.focus();
+    if (!next) return;
+
+    const maxDigits = fieldId.endsWith("-min") ? 3 : 2;
+    if (digits.length >= maxDigits) {
+      fieldRefs.current[next]?.focus();
+      return;
+    }
+    pendingAdvance.current[fieldId] = setTimeout(() => {
+      delete pendingAdvance.current[fieldId];
+      fieldRefs.current[next]?.focus();
+    }, 500);
   }
 
   function buildInput(): ZoneActivityInput & { date: string } {
@@ -194,7 +221,7 @@ export function ZoneLogForm({
   if (!open) {
     return (
       <Button onClick={() => setOpen(true)} className="self-start">
-        Log activity 🔥
+        Log activity <span aria-hidden="true">🔥</span>
       </Button>
     );
   }
@@ -206,20 +233,27 @@ export function ZoneLogForm({
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div className="grid grid-cols-3 gap-2">
+          <div
+            role="group"
+            aria-label="Activity type"
+            className="grid grid-cols-3 gap-2"
+          >
             {KIND_PILLS.map((pill) => (
               <button
                 key={pill.value}
                 type="button"
                 onClick={() => setKind(pill.value)}
+                aria-pressed={kind === pill.value}
                 className={cn(
-                  "flex flex-col items-center gap-1 rounded-lg border-2 px-2 py-3 text-sm font-medium transition-colors",
+                  "flex flex-col items-center gap-1 rounded-lg border-2 px-2 py-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card",
                   kind === pill.value
                     ? "border-primary bg-primary/10 text-foreground"
                     : "border-line bg-background-secondary text-muted hover:border-line-light"
                 )}
               >
-                <span className="text-xl">{pill.emoji}</span>
+                <span className="text-xl" aria-hidden="true">
+                  {pill.emoji}
+                </span>
                 {pill.label}
               </button>
             ))}
@@ -248,7 +282,13 @@ export function ZoneLogForm({
                 onClick={() => screenshotInputRef.current?.click()}
                 disabled={scanning}
               >
-                {scanning ? "Reading screenshot…" : "Scan screenshot 📸"}
+                {scanning ? (
+                  "Reading screenshot…"
+                ) : (
+                  <>
+                    Scan screenshot <span aria-hidden="true">📸</span>
+                  </>
+                )}
               </Button>
               <input
                 ref={screenshotInputRef}
@@ -329,15 +369,20 @@ export function ZoneLogForm({
 
           {kind === "others" && (
             <div className="flex flex-col gap-1.5">
-              <Label>Duration</Label>
-              <div className="grid grid-cols-2 gap-2">
+              <Label id="zoneDurationLabel">Duration</Label>
+              <div
+                role="group"
+                aria-labelledby="zoneDurationLabel"
+                className="grid grid-cols-2 gap-2"
+              >
                 {(["30", "60"] as const).map((t) => (
                   <button
                     key={t}
                     type="button"
                     onClick={() => setTier(t)}
+                    aria-pressed={tier === t}
                     className={cn(
-                      "rounded-lg border-2 px-3 py-2 text-sm font-medium transition-colors",
+                      "rounded-lg border-2 px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card",
                       tier === t
                         ? "border-primary bg-primary/10 text-foreground"
                         : "border-line bg-background-secondary text-muted hover:border-line-light"
@@ -374,7 +419,13 @@ export function ZoneLogForm({
 
           <div className="flex gap-2">
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Saving…" : "Submit and get fit! 🔥"}
+              {submitting ? (
+                "Saving…"
+              ) : (
+                <>
+                  Submit and get fit! <span aria-hidden="true">🔥</span>
+                </>
+              )}
             </Button>
             <Button
               variant="ghost"

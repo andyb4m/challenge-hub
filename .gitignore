@@ -23,3 +23,10 @@ npm-debug.log*
 
 # OS
 .DS_Store
+
+# Impeccable design skill: generated state; only the shared config is tracked
+.impeccable/*
+!.impeccable/config.json
+.claude/skills/impeccable/scripts/bin/
+.claude/skills/impeccable/scripts/config.json
+.claude/skills/impeccable/scripts/.impeccable/
