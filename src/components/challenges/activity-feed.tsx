@@ -219,7 +219,7 @@ export function ActivityFeed({
                 )}
                 onClick={() => setMineOnly((v) => !v)}
                 aria-pressed={mineOnly}
-                aria-label={mineOnly ? "Showing only my activities" : "Show only my activities"}
+                aria-label="Only my activities"
                 title="Only my activities"
               >
                 <PersonIcon className="h-4 w-4" />

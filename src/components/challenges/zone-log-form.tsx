@@ -170,7 +170,7 @@ export function ZoneLogForm({
   if (!open) {
     return (
       <Button onClick={() => setOpen(true)} className="self-start">
-        Log activity 🔥
+        Log activity <span aria-hidden="true">🔥</span>
       </Button>
     );
   }
@@ -194,7 +194,7 @@ export function ZoneLogForm({
                 onClick={() => setKind(pill.value)}
                 aria-pressed={kind === pill.value}
                 className={cn(
-                  "flex flex-col items-center gap-1 rounded-lg border-2 px-2 py-3 text-sm font-medium transition-colors",
+                  "flex flex-col items-center gap-1 rounded-lg border-2 px-2 py-3 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card",
                   kind === pill.value
                     ? "border-primary bg-primary/10 text-foreground"
                     : "border-line bg-background-secondary text-muted hover:border-line-light"
@@ -298,7 +298,7 @@ export function ZoneLogForm({
                     onClick={() => setTier(t)}
                     aria-pressed={tier === t}
                     className={cn(
-                      "rounded-lg border-2 px-3 py-2 text-sm font-medium transition-colors",
+                      "rounded-lg border-2 px-3 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-card",
                       tier === t
                         ? "border-primary bg-primary/10 text-foreground"
                         : "border-line bg-background-secondary text-muted hover:border-line-light"
@@ -335,7 +335,13 @@ export function ZoneLogForm({
 
           <div className="flex gap-2">
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Saving…" : "Submit and get fit! 🔥"}
+              {submitting ? (
+                "Saving…"
+              ) : (
+                <>
+                  Submit and get fit! <span aria-hidden="true">🔥</span>
+                </>
+              )}
             </Button>
             <Button
               variant="ghost"

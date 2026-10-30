@@ -47,3 +47,20 @@ export function buildZoneProgressChart(
 
   return { dates, series };
 }
+
+/**
+ * Y-axis ticks at round values (0, 200, 400, …) covering `dataMax`, with
+ * about `targetTicks` intervals. Steps are 1, 2, 2.5 or 5 × a power of ten,
+ * never below 1 (points are whole numbers). Dividing the raw max evenly gave
+ * labels like 153 / 305 / 458.
+ */
+export function niceYTicks(dataMax: number, targetTicks: number): number[] {
+  const raw = Math.max(dataMax, 1) / targetTicks;
+  const magnitude = 10 ** Math.floor(Math.log10(raw));
+  const normalized = raw / magnitude;
+  const factor =
+    normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 2.5 ? 2.5 : normalized <= 5 ? 5 : 10;
+  const step = Math.max(1, factor * magnitude);
+  const count = Math.max(1, Math.ceil(Math.max(dataMax, 1) / step));
+  return Array.from({ length: count + 1 }, (_, i) => i * step);
+}
