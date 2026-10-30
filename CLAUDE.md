@@ -25,6 +25,7 @@ Open items: `docs/tech-debt.md`. Legacy design + zone-scoring origin: `docs/lega
 | Tests | Vitest + RTL, `src/lib/**` only — no component tests, by convention |
 | Activity source | Strava OAuth + webhook. Garmin is hypothetical, not started |
 | State | SWR-style hooks in `src/lib/challenges/hooks.ts`; React Context only for auth |
+| Design review | Vendored `impeccable` skill (`.claude/skills/impeccable/`, pinned, no hooks — see its `UPSTREAM.md`). Advisory only: this file and `ui-conventions.md` win where they conflict |
 
 ## Load-bearing rules (apply everywhere)
 
