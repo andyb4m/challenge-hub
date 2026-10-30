@@ -1,7 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import type { ZoneProgressChartData } from "@/lib/challenges/progress-chart";
+import {
+  niceYTicks,
+  type ZoneProgressChartData,
+} from "@/lib/challenges/progress-chart";
 import {
   Card,
   CardContent,
@@ -95,14 +98,15 @@ export function ProgressChart({ data }: { data: ZoneProgressChartData }) {
   // Scale to whatever's actually shown; fall back to everyone if the user
   // has hidden every line, so the axes don't collapse to nothing.
   const scaleSeries = visibleSeries.length > 0 ? visibleSeries : series;
-  const maxY = Math.max(1, ...scaleSeries.flatMap((s) => s.points));
+  const yTickValues = niceYTicks(
+    Math.max(0, ...scaleSeries.flatMap((s) => s.points)),
+    Y_TICKS
+  );
+  const maxY = yTickValues.at(-1) ?? 1;
   const plotWidth = width - PADDING.left - PADDING.right;
   const x = (i: number) => PADDING.left + (i / (dates.length - 1)) * plotWidth;
   const y = (value: number) => PADDING.top + PLOT_HEIGHT - (value / maxY) * PLOT_HEIGHT;
 
-  const yTickValues = Array.from({ length: Y_TICKS + 1 }, (_, i) =>
-    Math.round((maxY / Y_TICKS) * i)
-  );
 
   const xLabelCount = Math.min(
     dates.length,
@@ -197,7 +201,7 @@ export function ProgressChart({ data }: { data: ZoneProgressChartData }) {
                   onClick={() => toggleUid(s.uid)}
                   aria-pressed={!hidden}
                   className={cn(
-                    "flex min-h-6 items-center gap-1.5",
+                    "flex min-h-6 items-center gap-1.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
                     hidden ? "text-faint line-through" : "text-muted"
                   )}
                 >

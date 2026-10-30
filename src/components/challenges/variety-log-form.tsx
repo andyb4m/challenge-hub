@@ -73,7 +73,7 @@ export function VarietyLogForm({
   if (!open) {
     return (
       <Button onClick={() => setOpen(true)} className="self-start">
-        Log activity 🌈
+        Log activity <span aria-hidden="true">🌈</span>
       </Button>
     );
   }
@@ -139,7 +139,13 @@ export function VarietyLogForm({
 
           <div className="flex gap-2">
             <Button type="submit" disabled={submitting}>
-              {submitting ? "Saving…" : "Count it! 🌈"}
+              {submitting ? (
+                "Saving…"
+              ) : (
+                <>
+                  Count it! <span aria-hidden="true">🌈</span>
+                </>
+              )}
             </Button>
             <Button
               variant="ghost"

@@ -57,7 +57,12 @@ export function VarietyCollection({
               >
                 {kind.label}
                 {kind.maxCount > 1 && ` ${counted}/${kind.maxCount}`}
-                {full && " ✓"}
+                {full && (
+                  <>
+                    <span aria-hidden="true"> ✓</span>
+                    <span className="sr-only">, complete</span>
+                  </>
+                )}
               </span>
             );
           })}

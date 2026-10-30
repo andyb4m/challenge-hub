@@ -20,8 +20,14 @@ export function InviteLinkButton({ token }: { token: string }) {
   }
 
   return (
-    <Button variant="outline" size="sm" onClick={handleCopy}>
-      {copied ? "Copied!" : "Copy invite link"}
-    </Button>
+    <>
+      <Button variant="outline" size="sm" onClick={handleCopy}>
+        {copied ? "Copied!" : "Copy invite link"}
+      </Button>
+      {/* A changed button label isn't announced; a live region is. */}
+      <span role="status" className="sr-only">
+        {copied ? "Invite link copied" : ""}
+      </span>
+    </>
   );
 }

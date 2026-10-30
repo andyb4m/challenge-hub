@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildZoneProgressChart } from "@/lib/challenges/progress-chart";
+import { buildZoneProgressChart, niceYTicks } from "@/lib/challenges/progress-chart";
 
 const members = [
   { uid: "u1", displayName: "Andy" },
@@ -51,5 +51,24 @@ describe("buildZoneProgressChart", () => {
     const result = buildZoneProgressChart(activities, members);
 
     expect(result.series[0].points).toEqual([0]);
+  });
+});
+
+describe("niceYTicks", () => {
+  it("rounds an awkward max up to round steps", () => {
+    expect(niceYTicks(610, 4)).toEqual([0, 200, 400, 600, 800]);
+  });
+
+  it("uses 2.5x steps where they fit tighter", () => {
+    expect(niceYTicks(100, 4)).toEqual([0, 25, 50, 75, 100]);
+  });
+
+  it("covers the max exactly when it is already round", () => {
+    expect(niceYTicks(400, 4)).toEqual([0, 100, 200, 300, 400]);
+  });
+
+  it("never uses fractional steps for small or empty data", () => {
+    expect(niceYTicks(3, 4)).toEqual([0, 1, 2, 3]);
+    expect(niceYTicks(0, 4)).toEqual([0, 1]);
   });
 });

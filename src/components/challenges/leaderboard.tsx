@@ -70,7 +70,14 @@ export function Leaderboard({
             return (
               <li key={member.uid} className="flex items-center gap-3">
                 <span className="w-6 text-center text-sm font-semibold text-muted">
-                  {index === 0 ? "🏆" : index + 1}
+                  {index === 0 ? (
+                    <>
+                      <span aria-hidden="true">🏆</span>
+                      <span className="sr-only">1</span>
+                    </>
+                  ) : (
+                    index + 1
+                  )}
                 </span>
                 {member.photoURL ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -100,7 +107,9 @@ export function Leaderboard({
                           className="ml-1.5 rounded-full bg-warning/10 px-1.5 py-0.5 text-xs font-semibold text-warning"
                           title={`Low-intensity bonus active: +${bonusPercent(zoneConfig)}%`}
                         >
-                          ⭐ +{bonusPercent(zoneConfig)}%
+                          <span aria-hidden="true">⭐</span>
+                          <span className="sr-only">Low-intensity bonus</span> +
+                          {bonusPercent(zoneConfig)}%
                         </span>
                       )}
                     </span>

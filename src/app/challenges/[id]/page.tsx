@@ -80,7 +80,7 @@ function ChallengeDetail({ challengeId }: { challengeId: string }) {
         )}
         {status === "ended" && (
           <p className="rounded-md border border-success/30 bg-success/10 px-4 py-3 text-sm font-medium text-success">
-            Challenge completed! 🏁 Check out the final ranking below.
+            Challenge completed! <span aria-hidden="true">🏁</span> Check out the final ranking below.
           </p>
         )}
         {status === "upcoming" && (
