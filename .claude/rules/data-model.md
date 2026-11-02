@@ -65,6 +65,10 @@ Reads on `challenges/{id}` and its `members` / `activities` subcollections requi
 
 `/api/invite/[token]`, `/api/account` (DELETE), `/api/strava/{connect,callback,webhook}`, `/api/admin/**`. Where auth is required, each route verifies the caller's Firebase ID token itself — done server-side specifically to avoid Firebase Auth's client-side "recent login" requirement. Server lookups shared between a route handler and `generateMetadata` go in `src/lib/**/*-server.ts` (see `invite-server.ts`), not duplicated.
 
+## Claude API (zone screenshot scan)
+
+`parseZoneScreenshot` (`src/lib/challenges/zone-screenshot.ts`) gets JSON back through **structured outputs** (`beta.messages.parse` + `betaZodOutputFormat`), not a forced tool call. Claude Sonnet 5.5 and later reject `tool_choice` `{type: "tool"}` / `{type: "any"}` with a 400, which broke every scan before PR #38 shipped. Keep the client-side zod range check (`parseZoneScreenshotOutput`); structured outputs guarantee shape, not bounds. Adaptive thinking is always on and counts against `max_tokens`, so don't drop it back to a few hundred. The route logs one `parse-screenshot:` line per failure step in the Netlify function log: check there first.
+
 ## Auth service
 
 `requestPasswordReset` (`src/lib/auth/service.ts`) swallows `auth/user-not-found` so `/forgot-password` never reveals whether an account exists. Keep that if the flow changes.
