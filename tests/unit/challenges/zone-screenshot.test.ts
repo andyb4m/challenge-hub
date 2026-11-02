@@ -1,12 +1,12 @@
 import { describe, it, expect } from "vitest";
 import {
   isAllowedScreenshotType,
-  parseZoneScreenshotToolResponse,
+  parseZoneScreenshotOutput,
 } from "@/lib/challenges/zone-screenshot";
 
-describe("parseZoneScreenshotToolResponse", () => {
-  it("reshapes a valid tool_use input into {found, zones}", () => {
-    const result = parseZoneScreenshotToolResponse({
+describe("parseZoneScreenshotOutput", () => {
+  it("reshapes a valid structured output into {found, zones}", () => {
+    const result = parseZoneScreenshotOutput({
       found: true,
       z2: 32.5,
       z3: 10,
@@ -20,7 +20,7 @@ describe("parseZoneScreenshotToolResponse", () => {
   });
 
   it("passes through found: false with zeroed zones", () => {
-    const result = parseZoneScreenshotToolResponse({
+    const result = parseZoneScreenshotOutput({
       found: false,
       z2: 0,
       z3: 0,
@@ -32,24 +32,24 @@ describe("parseZoneScreenshotToolResponse", () => {
 
   it("throws on a negative zone value (model hallucination guard)", () => {
     expect(() =>
-      parseZoneScreenshotToolResponse({ found: true, z2: -5, z3: 0, z4: 0, z5: 0 })
+      parseZoneScreenshotOutput({ found: true, z2: -5, z3: 0, z4: 0, z5: 0 })
     ).toThrow();
   });
 
   it("throws on an implausibly large zone value", () => {
     expect(() =>
-      parseZoneScreenshotToolResponse({ found: true, z2: 9999, z3: 0, z4: 0, z5: 0 })
+      parseZoneScreenshotOutput({ found: true, z2: 9999, z3: 0, z4: 0, z5: 0 })
     ).toThrow();
   });
 
   it("throws when a required field is missing", () => {
     expect(() =>
-      parseZoneScreenshotToolResponse({ found: true, z2: 10, z3: 0, z4: 0 })
+      parseZoneScreenshotOutput({ found: true, z2: 10, z3: 0, z4: 0 })
     ).toThrow();
   });
 
   it("throws on a non-object input", () => {
-    expect(() => parseZoneScreenshotToolResponse("not an object")).toThrow();
+    expect(() => parseZoneScreenshotOutput("not an object")).toThrow();
   });
 });
 

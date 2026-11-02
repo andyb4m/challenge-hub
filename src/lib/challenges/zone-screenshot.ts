@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { z as z4 } from "zod/v4";
+import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { anthropicClient } from "@/lib/anthropic/client";
 import { adminDb } from "@/lib/firebase/admin";
 import { COLLECTIONS } from "@/lib/firebase/collections";
@@ -25,8 +27,6 @@ export const MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024;
 
 const MODEL = "claude-sonnet-5-5";
 
-const EXTRACT_ZONES_TOOL = "extracted_zone_minutes";
-
 /**
  * Same Z2-Z5 model as mapStravaHeartrateZones (src/lib/strava/zones.ts):
  * Zone 1 (warmup/recovery) is dropped, Zones 2-5 map directly. Garmin,
@@ -37,11 +37,26 @@ const SYSTEM_PROMPT = `You read screenshots of fitness-tracker workout summaries
 
 Zones follow the standard 5-zone model: Zone 1 is warmup/recovery and must be ignored. Extract only Zone 2 (easy/aerobic) through Zone 5 (max/anaerobic), in minutes. Partial minutes are fine (e.g. 12:30 is 12.5).
 
-Always call the ${EXTRACT_ZONES_TOOL} tool exactly once. If the screenshot doesn't show a heart-rate zone breakdown at all, set found to false and all zone values to 0.`;
+If the screenshot doesn't show a heart-rate zone breakdown at all, set found to false and all zone values to 0.`;
+
+// The JSON shape the API is constrained to return (structured outputs).
+// Plain numbers on purpose: range limits aren't something structured
+// outputs promises to enforce, so they're checked client-side by
+// outputSchema below. Uses zod/v4 because the SDK helper is typed against
+// it; the rest of the project is on the zod v3 API.
+const ZONES_OUTPUT_FORMAT = betaZodOutputFormat(
+  z4.object({
+    found: z4.boolean(),
+    z2: z4.number(),
+    z3: z4.number(),
+    z4: z4.number(),
+    z5: z4.number(),
+  })
+);
 
 const zoneMinutesSchema = z.number().min(0).max(600);
 
-const toolResponseSchema = z.object({
+const outputSchema = z.object({
   found: z.boolean(),
   z2: zoneMinutesSchema,
   z3: zoneMinutesSchema,
@@ -79,12 +94,12 @@ export async function checkAndIncrementScanLimit(uid: string): Promise<boolean> 
 }
 
 /**
- * Validates and reshapes the model's tool_use input. Separated from the
+ * Validates and reshapes the model's structured output. Separated from the
  * network call below so it's unit-testable without mocking the SDK —
  * same split as fetchStravaActivity's 404-vs-throw boundary.
  */
-export function parseZoneScreenshotToolResponse(input: unknown): ZoneScreenshotResult {
-  const parsed = toolResponseSchema.parse(input);
+export function parseZoneScreenshotOutput(output: unknown): ZoneScreenshotResult {
+  const parsed = outputSchema.parse(output);
   return {
     found: parsed.found,
     zones: { z2: parsed.z2, z3: parsed.z3, z4: parsed.z4, z5: parsed.z5 },
@@ -100,31 +115,19 @@ export async function parseZoneScreenshot(
   imageBase64: string,
   mediaType: AllowedScreenshotType
 ): Promise<ZoneScreenshotResult> {
-  const message = await anthropicClient().messages.create({
+  // Structured outputs, not a forced tool call: Claude Sonnet 5.5 rejects
+  // tool_choice {type: "tool"} with a 400. Low effort keeps latency down
+  // for a simple read; max_tokens leaves room for its (always-on)
+  // adaptive thinking, which counts against the limit. `fallbacks:
+  // "default"` reroutes a policy decline to another model inside the same
+  // call instead of failing the scan.
+  const message = await anthropicClient().beta.messages.parse({
     model: MODEL,
-    max_tokens: 256,
+    max_tokens: 4096,
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
+    output_config: { effort: "low", format: ZONES_OUTPUT_FORMAT },
     system: SYSTEM_PROMPT,
-    tool_choice: { type: "tool", name: EXTRACT_ZONES_TOOL },
-    tools: [
-      {
-        name: EXTRACT_ZONES_TOOL,
-        description: "The workout's heart-rate zone training time read from the screenshot.",
-        input_schema: {
-          type: "object",
-          properties: {
-            found: {
-              type: "boolean",
-              description: "true if this screenshot shows a heart-rate zone time breakdown",
-            },
-            z2: { type: "number", description: "Minutes in Zone 2" },
-            z3: { type: "number", description: "Minutes in Zone 3" },
-            z4: { type: "number", description: "Minutes in Zone 4" },
-            z5: { type: "number", description: "Minutes in Zone 5" },
-          },
-          required: ["found", "z2", "z3", "z4", "z5"],
-        },
-      },
-    ],
     messages: [
       {
         role: "user",
@@ -138,10 +141,12 @@ export async function parseZoneScreenshot(
     ],
   });
 
-  const toolUse = message.content.find((block) => block.type === "tool_use");
-  if (!toolUse || toolUse.type !== "tool_use") {
-    throw new Error("Model did not return the expected tool call");
+  if (message.stop_reason === "refusal") {
+    throw new Error("Screenshot scan was declined");
   }
-
-  return parseZoneScreenshotToolResponse(toolUse.input);
+  if (message.parsed_output == null) {
+    // e.g. stop_reason max_tokens: no complete JSON to parse
+    throw new Error(`No structured output (stop_reason: ${message.stop_reason})`);
+  }
+  return parseZoneScreenshotOutput(message.parsed_output);
 }
