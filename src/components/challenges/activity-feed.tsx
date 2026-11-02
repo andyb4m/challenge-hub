@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import { StravaBadge } from "@/components/strava-badge";
 
 type SortKey = "date" | "points" | "distance";
 const SORT_LABELS: Record<SortKey, string> = {
@@ -314,9 +315,7 @@ export function ActivityFeed({
                           )}
                         </p>
                         {activity.source === "strava" && (
-                          <span className="shrink-0 rounded-full bg-strava/10 px-1.5 py-0.5 text-xs font-semibold text-strava-light">
-                            Strava
-                          </span>
+                          <StravaBadge />
                         )}
                       </div>
                       {points !== null && (

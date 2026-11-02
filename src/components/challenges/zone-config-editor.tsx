@@ -22,7 +22,7 @@ export function ZoneConfigEditor({
         <Label>Zone rules</Label>
         <button
           type="button"
-          className="text-xs text-muted underline hover:text-foreground"
+          className="rounded text-xs text-muted underline hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           onClick={() => onChange(DEFAULT_ZONE_CONFIG)}
         >
           Reset to defaults

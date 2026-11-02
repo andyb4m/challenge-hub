@@ -1,13 +1,6 @@
 import type { RecentActivity } from "@/lib/challenges/service";
 import { Card, CardContent } from "@/components/ui/card";
-
-function StravaBadge() {
-  return (
-    <span className="ml-1.5 rounded-full bg-[#FC4C02]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#FC4C02]">
-      Strava
-    </span>
-  );
-}
+import { StravaBadge } from "@/components/strava-badge";
 
 export function RecentActivityCard({
   activities,
@@ -35,7 +28,7 @@ export function RecentActivityCard({
                 >
                   <span className="truncate font-medium text-foreground">
                     {activity.name}
-                    {activity.source === "strava" && <StravaBadge />}
+                    {activity.source === "strava" && <StravaBadge className="ml-1.5" />}
                   </span>
                   <span className="truncate text-xs text-muted">
                     {activity.startDate.slice(0, 10)} in{" "}
@@ -49,7 +42,7 @@ export function RecentActivityCard({
                 >
                   <span className="min-w-0 flex-1 truncate font-medium text-foreground">
                     {activity.name}
-                    {activity.source === "strava" && <StravaBadge />}
+                    {activity.source === "strava" && <StravaBadge className="ml-1.5" />}
                   </span>
                   <span className="shrink-0 whitespace-nowrap text-xs text-muted">
                     {activity.startDate.slice(0, 10)} in{" "}
