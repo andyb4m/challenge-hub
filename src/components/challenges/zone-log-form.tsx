@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Activity, Challenge, ZoneActivityKind } from "@/types";
-import { logZoneActivity } from "@/lib/challenges/service";
+import { logZoneActivity, parseZoneScreenshot } from "@/lib/challenges/service";
 import {
   zoneActivitySchema,
   isDateInChallengeWindow,
@@ -16,12 +16,33 @@ import {
   zoneActivityPoints,
   type OthersTier,
   type ZoneActivityInput,
+  type ZoneMinutes,
 } from "@/lib/challenges/zone";
+import { useAuth } from "@/lib/auth/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+
+// Error codes from /api/zones/parse-screenshot (via parseZoneScreenshot)
+const SCAN_ERROR_MESSAGES: Record<string, string> = {
+  "rate-limited":
+    "You've hit today's scan limit — try again tomorrow, or enter it manually below.",
+  "too-large":
+    "That image is over 5 MB — try a screenshot rather than a photo, or enter it manually.",
+  "unsupported-type":
+    "That file type isn't supported — use a PNG or JPEG screenshot, or enter it manually.",
+  unauthenticated: "Your sign-in expired — reload the page and try again.",
+  "server-misconfigured":
+    "Scanning isn't set up on this deployment yet — enter it manually for now.",
+  "limit-check-failed":
+    "Couldn't check your daily scan limit — try again in a moment.",
+  "parse-failed":
+    "The scan service is unavailable right now — enter it manually, or try again later.",
+};
+const SCAN_ERROR_FALLBACK =
+  "Could not read that screenshot. Please try again or enter it manually.";
 
 const KIND_PILLS: { value: ZoneActivityKind; emoji: string; label: string }[] = [
   { value: "zone-training", emoji: "🏃", label: "Zone training" },
@@ -44,6 +65,26 @@ function zoneTimeToMinutes(t: ZoneTime): number {
   return (Number(t.min) || 0) + (Number(t.sec) || 0) / 60;
 }
 
+/** Inverse of zoneTimeToMinutes, for pre-filling from a scanned screenshot. */
+function minutesToZoneTime(totalMinutes: number): ZoneTime {
+  const whole = Math.floor(totalMinutes);
+  const sec = Math.round((totalMinutes - whole) * 60);
+  return sec === 60
+    ? { min: String(whole + 1), sec: "0" }
+    : { min: String(whole), sec: String(sec) };
+}
+
+function zoneMinutesToZoneTimes(
+  zones: ZoneMinutes
+): Record<(typeof ZONE_FIELDS)[number], ZoneTime> {
+  return {
+    z2: minutesToZoneTime(zones.z2),
+    z3: minutesToZoneTime(zones.z3),
+    z4: minutesToZoneTime(zones.z4),
+    z5: minutesToZoneTime(zones.z5),
+  };
+}
+
 // Tab order for auto-advance: min -> sec -> next zone's min -> ...
 const FIELD_ORDER = ZONE_FIELDS.flatMap((zone) => [
   `${zone}-min`,
@@ -59,6 +100,7 @@ export function ZoneLogForm({
   uid: string;
   activities: Activity[];
 }) {
+  const { user } = useAuth();
   const config = challenge.zoneConfig ?? DEFAULT_ZONE_CONFIG;
   const [open, setOpen] = useState(false);
   const [kind, setKind] = useState<ZoneActivityKind>("zone-training");
@@ -67,8 +109,33 @@ export function ZoneLogForm({
   const [tier, setTier] = useState<OthersTier>("30");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [scanning, setScanning] = useState(false);
   const fieldRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const screenshotInputRef = useRef<HTMLInputElement>(null);
   const pendingAdvance = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  async function handleScreenshot(file: File | undefined) {
+    if (!file || !user) return;
+    setScanning(true);
+    setError(null);
+    try {
+      const idToken = await user.getIdToken();
+      const result = await parseZoneScreenshot(file, idToken);
+      if (!result.found) {
+        setError(
+          "Couldn't find a zone breakdown in that screenshot — try a clearer photo, or enter it manually below."
+        );
+        return;
+      }
+      setZones(zoneMinutesToZoneTimes(result.zones));
+    } catch (err) {
+      const code = err instanceof Error ? err.message : "";
+      setError(SCAN_ERROR_MESSAGES[code] ?? SCAN_ERROR_FALLBACK);
+    } finally {
+      setScanning(false);
+      if (screenshotInputRef.current) screenshotInputRef.current.value = "";
+    }
+  }
 
   useEffect(() => {
     const timers = pendingAdvance.current;
@@ -220,6 +287,39 @@ export function ZoneLogForm({
               required
             />
           </div>
+
+          {kind === "zone-training" && (
+            <div className="flex flex-col gap-1.5">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="self-start"
+                onClick={() => screenshotInputRef.current?.click()}
+                disabled={scanning}
+              >
+                {scanning ? (
+                  "Reading screenshot…"
+                ) : (
+                  <>
+                    Scan screenshot <span aria-hidden="true">📸</span>
+                  </>
+                )}
+              </Button>
+              <input
+                ref={screenshotInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => handleScreenshot(e.target.files?.[0])}
+              />
+              <p className="text-xs text-faint">
+                A Garmin, Polar or Strava zone summary — fills in the fields
+                below for you to check before saving. Sent to Anthropic for
+                one-time processing; never stored.
+              </p>
+            </div>
+          )}
 
           {kind === "zone-training" && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

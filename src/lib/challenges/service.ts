@@ -35,6 +35,7 @@ import {
 } from "@/lib/challenges/challenge-doc";
 import { challengeScoring } from "@/lib/challenges/scoring";
 import type { ZoneActivityInput } from "@/lib/challenges/zone";
+import type { ZoneScreenshotResult } from "@/lib/challenges/zone-screenshot";
 
 type MemberProfile = Pick<User, "uid" | "displayName" | "photoURL">;
 
@@ -337,4 +338,38 @@ export async function deleteChallenge(
   if (!res.ok) {
     throw new Error("Failed to delete challenge");
   }
+}
+
+/**
+ * Sends a fitness-tracker screenshot to the server for zone-minutes
+ * extraction. The file never touches Firestore/Storage — it's forwarded
+ * to Claude's vision API in memory and discarded.
+ */
+export async function parseZoneScreenshot(
+  file: File,
+  idToken: string
+): Promise<ZoneScreenshotResult> {
+  const formData = new FormData();
+  formData.append("image", file);
+
+  const res = await fetch("/api/zones/parse-screenshot", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${idToken}` },
+    body: formData,
+  });
+  if (!res.ok) {
+    // Surface the route's error code (rate-limited, too-large,
+    // unsupported-type, unauthenticated, parse-failed) so the form can say
+    // what actually went wrong. A 413 comes from Netlify's own body-size
+    // limit, before the route runs, so it carries no JSON.
+    let code = res.status === 413 ? "too-large" : "failed";
+    try {
+      const body = (await res.json()) as { error?: unknown };
+      if (typeof body.error === "string") code = body.error;
+    } catch {
+      // Non-JSON error body (platform error page); keep the fallback code
+    }
+    throw new Error(code);
+  }
+  return (await res.json()) as ZoneScreenshotResult;
 }
