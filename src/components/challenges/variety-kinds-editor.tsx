@@ -84,7 +84,7 @@ export function VarietyKindsEditor({
             <button
               type="button"
               aria-label={`Remove ${kind.label}`}
-              className="rounded px-1.5 py-1 text-sm text-muted hover:bg-error/10 hover:text-error"
+              className="rounded px-1.5 py-1 text-sm text-muted hover:bg-error/10 hover:text-error focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
               onClick={() => removeKind(kind.id)}
             >
               ✕
@@ -100,6 +100,7 @@ export function VarietyKindsEditor({
 
       <div className="flex gap-2">
         <Input
+          aria-label="New activity name"
           placeholder="Add an activity… (e.g. 🏇 Horse riding)"
           className="h-9 text-sm"
           value={newLabel}

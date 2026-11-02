@@ -1,6 +1,7 @@
 import type { RecentActivity } from "@/lib/challenges/service";
 import { groupActivitiesByDate, localToday } from "@/lib/challenges/scoring";
 import { cn } from "@/lib/utils";
+import { StravaBadge } from "@/components/strava-badge";
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTH_LABELS = [
@@ -23,14 +24,6 @@ function dayNumber(date: string): string {
 function monthLabel(date: string): string {
   const [year, month] = date.split("-").map(Number);
   return `${MONTH_LABELS[month - 1]} ${year}`;
-}
-
-function StravaBadge() {
-  return (
-    <span className="ml-1.5 rounded-full bg-[#FC4C02]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#FC4C02]">
-      Strava
-    </span>
-  );
 }
 
 export function ActivitySchedule({
@@ -92,13 +85,13 @@ export function ActivitySchedule({
                     className={cn(
                       "min-w-0 rounded-lg border-l-4 bg-card py-2 pl-3 pr-3",
                       activity.source === "strava"
-                        ? "border-l-[#FC4C02]"
+                        ? "border-l-strava"
                         : "border-l-primary"
                     )}
                   >
                     <p className="truncate text-sm font-medium text-foreground">
                       {activity.name}
-                      {activity.source === "strava" && <StravaBadge />}
+                      {activity.source === "strava" && <StravaBadge className="ml-1.5" />}
                     </p>
                     <p className="truncate text-xs text-muted">
                       {activity.challengeName}

@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth/auth-context";
 import { RecentActivityCard } from "@/components/challenges/recent-activity-card";
 import { AdminUserDetailSkeleton } from "@/components/admin/admin-user-detail-skeleton";
 import type { RecentActivity } from "@/lib/challenges/service";
+import { StravaBadge } from "@/components/strava-badge";
 
 interface AdminUserDetail {
   uid: string;
@@ -101,9 +102,7 @@ function AdminUserDetailContent({ uid }: { uid: string }) {
         <h1 className="flex items-center gap-2 text-2xl font-bold text-foreground">
           {user.displayName}
           {user.stravaConnected && (
-            <span className="rounded-full bg-[#FC4C02]/10 px-2 py-0.5 text-xs font-semibold text-[#FC4C02]">
-              Strava
-            </span>
+            <StravaBadge className="px-2" />
           )}
         </h1>
         <p className="text-sm text-muted">{user.email}</p>
