@@ -8,14 +8,15 @@
 // one-off environment override.
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { mockVerifyIdToken, mockCheckLimit, mockParseScreenshot } = vi.hoisted(() => ({
+const { mockAdminAuth, mockVerifyIdToken, mockCheckLimit, mockParseScreenshot } = vi.hoisted(() => ({
+  mockAdminAuth: vi.fn(),
   mockVerifyIdToken: vi.fn(),
   mockCheckLimit: vi.fn(),
   mockParseScreenshot: vi.fn(),
 }));
 
 vi.mock("@/lib/firebase/admin", () => ({
-  adminAuth: () => ({ verifyIdToken: mockVerifyIdToken }),
+  adminAuth: mockAdminAuth,
 }));
 
 vi.mock("@/lib/challenges/zone-screenshot", async () => {
@@ -44,6 +45,7 @@ function makeRequest(options: { token?: string; file?: File } = {}) {
 describe("POST /api/zones/parse-screenshot", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockAdminAuth.mockReturnValue({ verifyIdToken: mockVerifyIdToken });
     mockCheckLimit.mockResolvedValue(true);
   });
 
@@ -122,5 +124,27 @@ describe("POST /api/zones/parse-screenshot", () => {
     const file = new File(["img"], "zones.png", { type: "image/png" });
     const res = await POST(makeRequest({ token: "good", file }));
     expect(res.status).toBe(502);
+  });
+
+  it("returns 500 server-misconfigured when Firebase Admin can't initialize", async () => {
+    // e.g. FIREBASE_ADMIN_* unset in this deploy context: must not be
+    // reported as the user's sign-in having expired.
+    mockAdminAuth.mockImplementation(() => {
+      throw new Error("Service account object must contain a string \"project_id\" property.");
+    });
+    const res = await POST(makeRequest({ token: "good" }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "server-misconfigured" });
+    expect(mockVerifyIdToken).not.toHaveBeenCalled();
+  });
+
+  it("returns 500 limit-check-failed when the scan-limit write fails, without calling the vision API", async () => {
+    mockVerifyIdToken.mockResolvedValue({ uid: "u1" });
+    mockCheckLimit.mockRejectedValue(new Error("firestore unavailable"));
+    const file = new File(["img"], "zones.png", { type: "image/png" });
+    const res = await POST(makeRequest({ token: "good", file }));
+    expect(res.status).toBe(500);
+    expect(await res.json()).toEqual({ error: "limit-check-failed" });
+    expect(mockParseScreenshot).not.toHaveBeenCalled();
   });
 });

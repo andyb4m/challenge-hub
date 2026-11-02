@@ -24,10 +24,28 @@ export async function POST(request: Request) {
   if (!idToken) {
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   }
+  // Admin init and token verification fail for very different reasons
+  // (missing FIREBASE_ADMIN_* in this deploy context vs. an expired or
+  // forged token), so they're logged and reported separately.
+  let auth: ReturnType<typeof adminAuth>;
+  try {
+    auth = adminAuth();
+  } catch (err) {
+    console.error("parse-screenshot: Firebase Admin init failed:", errorMessage(err));
+    return NextResponse.json({ error: "server-misconfigured" }, { status: 500 });
+  }
   let uid: string;
   try {
-    ({ uid } = await adminAuth().verifyIdToken(idToken));
-  } catch {
+    ({ uid } = await auth.verifyIdToken(idToken));
+  } catch (err) {
+    // The code only (e.g. auth/id-token-expired): firebase-admin echoes
+    // unverified token claims into its messages, so logging the message
+    // would let anyone write arbitrary text into the function logs.
+    const code = (err as { code?: unknown } | null)?.code;
+    console.error(
+      "parse-screenshot: ID token rejected:",
+      typeof code === "string" ? code : "unknown"
+    );
     return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   }
 
@@ -51,7 +69,14 @@ export async function POST(request: Request) {
 
   // Checked only once the upload itself is valid, so a mis-picked file
   // doesn't cost the user one of their daily scans.
-  if (!(await checkAndIncrementScanLimit(uid))) {
+  let allowed: boolean;
+  try {
+    allowed = await checkAndIncrementScanLimit(uid);
+  } catch (err) {
+    console.error("parse-screenshot: scan-limit check failed:", errorMessage(err));
+    return NextResponse.json({ error: "limit-check-failed" }, { status: 500 });
+  }
+  if (!allowed) {
     return NextResponse.json({ error: "rate-limited" }, { status: 429 });
   }
 
@@ -61,7 +86,13 @@ export async function POST(request: Request) {
     const result = await parseZoneScreenshot(buffer.toString("base64"), file.type);
     return NextResponse.json(result);
   } catch (err) {
-    console.error("parseZoneScreenshot failed:", err);
+    console.error("parse-screenshot: vision API call failed:", errorMessage(err));
     return NextResponse.json({ error: "parse-failed" }, { status: 502 });
   }
+}
+
+// Messages only: never log the token, the image, or a full error object
+// (which can carry request details).
+function errorMessage(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
 }

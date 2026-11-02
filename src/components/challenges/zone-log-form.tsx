@@ -25,6 +25,25 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
+// Error codes from /api/zones/parse-screenshot (via parseZoneScreenshot)
+const SCAN_ERROR_MESSAGES: Record<string, string> = {
+  "rate-limited":
+    "You've hit today's scan limit — try again tomorrow, or enter it manually below.",
+  "too-large":
+    "That image is over 5 MB — try a screenshot rather than a photo, or enter it manually.",
+  "unsupported-type":
+    "That file type isn't supported — use a PNG or JPEG screenshot, or enter it manually.",
+  unauthenticated: "Your sign-in expired — reload the page and try again.",
+  "server-misconfigured":
+    "Scanning isn't set up on this deployment yet — enter it manually for now.",
+  "limit-check-failed":
+    "Couldn't check your daily scan limit — try again in a moment.",
+  "parse-failed":
+    "The scan service is unavailable right now — enter it manually, or try again later.",
+};
+const SCAN_ERROR_FALLBACK =
+  "Could not read that screenshot. Please try again or enter it manually.";
+
 const KIND_PILLS: { value: ZoneActivityKind; emoji: string; label: string }[] = [
   { value: "zone-training", emoji: "🏃", label: "Zone training" },
   { value: "others", emoji: "🏋️", label: "Other workout" },
@@ -110,11 +129,8 @@ export function ZoneLogForm({
       }
       setZones(zoneMinutesToZoneTimes(result.zones));
     } catch (err) {
-      setError(
-        err instanceof Error && err.message === "rate-limited"
-          ? "You've hit today's scan limit — try again tomorrow, or enter it manually below."
-          : "Could not read that screenshot. Please try again or enter it manually."
-      );
+      const code = err instanceof Error ? err.message : "";
+      setError(SCAN_ERROR_MESSAGES[code] ?? SCAN_ERROR_FALLBACK);
     } finally {
       setScanning(false);
       if (screenshotInputRef.current) screenshotInputRef.current.value = "";
